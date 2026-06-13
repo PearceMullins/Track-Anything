@@ -1,35 +1,79 @@
-# Fitness Tracker
+# Track Anything
 
-A desktop GUI app to log anything you want to track and view progress over time with charts.
+A modern React app to log anything you want to track and view progress over time with charts.
 
-## Features
+## Stack
 
-- Log any name (Body Weight, Pushups, Running, cardio, etc.)
-- Add as many sets as you need — each set accepts reps, minutes, miles, pounds, or any number
-- View workout history and delete entries
-- Progress charts per name showing total volume across dates
-
-**Volume** is the sum of all set values for a session. For example, 3 sets of 10 pushups = volume 30. For cardio, one set of 30 minutes = volume 30.
+- **Frontend:** React + TypeScript + Vite + Recharts
+- **Backend:** Python FastAPI (reuses your existing `workout_data.json` storage)
 
 ## Setup
 
 ```bash
 pip install -r requirements.txt
+cd frontend
+npm install
 ```
 
-## Run
+## Development
+
+Run in two terminals:
 
 ```bash
+# Terminal 1 — API on :8000
+python main.py --dev-frontend
+
+# Terminal 2 — React dev server on :5173 (proxies /api to backend)
+cd frontend && npm run dev
+```
+
+Open http://localhost:5173
+
+## Production (single app)
+
+```bash
+cd frontend && npm run build
+cd ..
 python main.py
 ```
 
-Data is saved automatically to `workout_data.json` next to the app (or next to the `.exe`).
+Opens http://127.0.0.1:8000 with the built React UI and API.
 
-## Build executable (Windows)
+## Data
+
+Entries are saved to `workout_data.json` next to the app (same format as before — your existing data still works).
+
+## Legacy desktop UI
+
+The original Tkinter UI files (`app.py`, `entry_panel.py`, etc.) remain in the repo but are no longer the default. Use the React app above.
+
+## Build desktop executable
+
+After `npm run build` in `frontend/`:
 
 ```bash
-pip install -r requirements.txt
+pip install pyinstaller
 python build_exe.py
 ```
 
-The executable is created at `dist/FitnessTracker.exe`.
+Produces `dist/TrackAnything.exe` (packages the API; build the frontend first).
+
+## Android / Google Play
+
+The mobile build uses **Capacitor** with on-device storage (no Python on the phone).
+
+```bash
+npm install          # root — Capacitor CLI
+cd frontend && npm install && cd ..
+npx cap add android  # first time only
+npm run mobile:build
+npx cap open android # build signed AAB in Android Studio
+```
+
+See **[PLAY_STORE.md](PLAY_STORE.md)** for the full testing matrix, beta tracks, and Play Console checklist.
+
+### Run all automated tests
+
+```powershell
+.\scripts\run_all_tests.ps1
+```

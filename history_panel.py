@@ -1,9 +1,10 @@
-"""Workout history list and delete actions."""
+"""Entry history list with edit and delete actions."""
 
 import tkinter as tk
 from tkinter import messagebox, ttk
 
 from data_store import WorkoutStore
+from history_edit_dialog import HistoryEditDialog
 from models import normalize_unit
 
 
@@ -16,39 +17,57 @@ class HistoryPanel(ttk.Frame):
         self.refresh()
 
     def _build(self) -> None:
-        header = ttk.Frame(self)
-        header.pack(fill=tk.X, padx=8, pady=(8, 4))
-        ttk.Label(header, text="Workout History", font=("", 11, "bold")).pack(side=tk.LEFT)
-        ttk.Button(header, text="Refresh", command=self.refresh).pack(side=tk.RIGHT)
+        card = ttk.LabelFrame(self, text="  History  ", style="Card.TLabelframe", padding=12)
+        card.pack(fill=tk.X, padx=12, pady=(0, 4))
+
+        header = ttk.Frame(card, style="Card.TFrame")
+        header.pack(fill=tk.X, pady=(0, 8))
+
+        ttk.Label(header, text="Recent entries", style="CardMuted.TLabel").pack(side=tk.LEFT)
+
+        header_btns = ttk.Frame(header, style="Card.TFrame")
+        header_btns.pack(side=tk.RIGHT)
+        ttk.Button(header_btns, text="Edit", style="Ghost.TButton", command=self._edit_selected).pack(
+            side=tk.LEFT, padx=(0, 6)
+        )
+        ttk.Button(header_btns, text="Delete", style="Ghost.TButton", command=self._delete_selected).pack(
+            side=tk.LEFT, padx=(0, 6)
+        )
+        ttk.Button(header_btns, text="Refresh", style="Ghost.TButton", command=self.refresh).pack(side=tk.LEFT)
+
+        table_frame = ttk.Frame(card, style="Card.TFrame")
+        table_frame.pack(fill=tk.X)
 
         columns = ("date", "exercise", "unit", "sets", "volume", "detail")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=3)
         self.tree.heading("date", text="Date")
         self.tree.heading("exercise", text="Name")
         self.tree.heading("unit", text="Unit")
-        self.tree.heading("sets", text="Sets")
+        self.tree.heading("sets", text="Rows")
         self.tree.heading("volume", text="Volume")
-        self.tree.heading("detail", text="Set Values")
+        self.tree.heading("detail", text="Details")
 
-        self.tree.column("date", width=95, anchor=tk.CENTER)
-        self.tree.column("exercise", width=120)
-        self.tree.column("unit", width=55, anchor=tk.CENTER)
-        self.tree.column("sets", width=45, anchor=tk.CENTER)
-        self.tree.column("volume", width=85, anchor=tk.CENTER)
-        self.tree.column("detail", width=200)
+        self.tree.column("date", width=95, anchor=tk.CENTER, stretch=False)
+        self.tree.column("exercise", width=130, stretch=False)
+        self.tree.column("unit", width=60, anchor=tk.CENTER, stretch=False)
+        self.tree.column("sets", width=45, anchor=tk.CENTER, stretch=False)
+        self.tree.column("volume", width=90, anchor=tk.CENTER, stretch=False)
+        self.tree.column("detail", width=240, stretch=True)
 
-        scroll = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self.tree.yview)
+        scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=scroll.set)
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 0), pady=(0, 8))
-        scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 8), pady=(0, 8))
+        self.tree.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-        ttk.Button(self, text="Delete Selected", command=self._delete_selected).pack(
-            anchor=tk.E, padx=8, pady=(0, 8)
-        )
+        self.tree.bind("<Double-1>", self._on_double_click)
 
     def refresh(self) -> None:
         for item in self.tree.get_children():
             self.tree.delete(item)
+
+        entry_count = len(self.store.entries)
+        visible_rows = min(max(entry_count, 3), 12)
+        self.tree.configure(height=visible_rows)
 
         for i, entry in enumerate(self.store.entries):
             self.tree.insert(
@@ -65,12 +84,42 @@ class HistoryPanel(ttk.Frame):
                 ),
             )
 
+    def _on_double_click(self, _event: tk.Event) -> None:
+        self._edit_selected()
+
+    def _edit_selected(self) -> None:
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showinfo("Edit", "Select an entry to edit.")
+            return
+        if len(selected) > 1:
+            messagebox.showinfo("Edit", "Select only one entry to edit at a time.")
+            return
+
+        index = int(selected[0])
+        entry = self.store.entries[index]
+        summary = f"{entry.workout_date} — {entry.exercise} ({entry.formatted_volume})"
+        if not messagebox.askyesno("Confirm Edit", f"Edit this entry?\n\n{summary}"):
+            return
+
+        HistoryEditDialog(
+            self,
+            self.store,
+            index,
+            entry,
+            on_saved=self._on_entry_saved,
+        )
+
+    def _on_entry_saved(self) -> None:
+        self.refresh()
+        self.on_change()
+
     def _delete_selected(self) -> None:
         selected = self.tree.selection()
         if not selected:
-            messagebox.showinfo("Delete", "Select a workout to delete.")
+            messagebox.showinfo("Delete", "Select an entry to delete.")
             return
-        if not messagebox.askyesno("Confirm", "Delete selected workout(s)?"):
+        if not messagebox.askyesno("Confirm", "Delete selected entry/entries?"):
             return
         indices = sorted((int(iid) for iid in selected), reverse=True)
         for index in indices:

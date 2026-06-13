@@ -1,4 +1,4 @@
-"""Matplotlib chart helpers for workout volume over time."""
+"""Matplotlib chart helpers for tracked volume over time."""
 
 from datetime import datetime, timedelta
 
@@ -7,9 +7,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from data_store import WorkoutStore
+from theme import COLORS
 
 
-def create_volume_figure(store: WorkoutStore, exercise: str) -> Figure | None:
+def create_volume_figure(
+    store: WorkoutStore,
+    exercise: str,
+    figsize: tuple[float, float] = (7, 4),
+) -> Figure | None:
     points = store.history_points(exercise)
     if not points:
         return None
@@ -18,13 +23,17 @@ def create_volume_figure(store: WorkoutStore, exercise: str) -> Figure | None:
     volumes = [vol for _, vol in points]
     x_values = mdates.date2num(dates)
 
-    fig = Figure(figsize=(7, 4), dpi=100)
-    fig.patch.set_facecolor("#1a1a26")
+    fig = Figure(figsize=figsize, dpi=100)
+    fig.patch.set_facecolor(COLORS["bg_card"])
     ax = fig.add_subplot(111)
-    ax.set_facecolor("#242436")
+    ax.set_facecolor(COLORS["bg_secondary"])
 
-    ax.plot(x_values, volumes, marker="o", linewidth=2, markersize=7, color="#7c9eff")
-    ax.fill_between(x_values, volumes, alpha=0.15, color="#7c9eff")
+    accent = COLORS["accent"]
+    ax.plot(x_values, volumes, marker="o", linewidth=2.2, markersize=7, color=accent)
+
+    ymin, ymax = _value_axis_limits(volumes)
+    ax.set_ylim(ymin, ymax)
+    ax.fill_between(x_values, ymin, volumes, alpha=0.18, color=accent)
 
     for x_val, vol in zip(x_values, volumes):
         ax.annotate(
@@ -34,21 +43,34 @@ def create_volume_figure(store: WorkoutStore, exercise: str) -> Figure | None:
             xytext=(0, 8),
             ha="center",
             fontsize=8,
-            color="#c8d4ff",
+            color=COLORS["fg"],
         )
 
-    ax.set_title(f"{exercise} — Progress Over Time", color="#e8e8f0", fontsize=12, pad=12)
-    ax.set_xlabel("Date", color="#a0a0b8")
-    ax.set_ylabel("Recorded Value", color="#a0a0b8")
-    ax.tick_params(colors="#a0a0b8")
-    ax.grid(True, alpha=0.2, color="#606080")
+    ax.set_title(f"{exercise} — Progress Over Time", color=COLORS["fg"], fontsize=12, pad=12)
+    ax.set_xlabel("Date", color=COLORS["fg_muted"])
+    ax.set_ylabel("Recorded Value", color=COLORS["fg_muted"])
+    ax.tick_params(colors=COLORS["fg_muted"])
+    ax.grid(True, alpha=0.18, color=COLORS["border"])
 
     for spine in ax.spines.values():
-        spine.set_color("#404060")
+        spine.set_color(COLORS["border"])
 
     _set_date_axis(ax, dates)
     fig.tight_layout()
     return fig
+
+
+def _value_axis_limits(values: list[float]) -> tuple[float, float]:
+    min_v = min(values)
+    max_v = max(values)
+    span = max_v - min_v
+
+    if span == 0:
+        pad = max(abs(min_v) * 0.05, 1.0) if min_v != 0 else 1.0
+    else:
+        pad = max(span * 0.08, 1e-9)
+
+    return min_v - pad, max_v + pad
 
 
 def _set_date_axis(ax, dates: list[datetime]) -> None:

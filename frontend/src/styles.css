@@ -102,6 +102,13 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-bottom: 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-panel[hidden] {
@@ -109,8 +116,9 @@ select {
 }
 
 .tab {
-  flex: 1;
-  padding: 10px 16px;
+  flex: 1 0 auto;
+  min-width: 5.5rem;
+  padding: 10px 12px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -129,6 +137,12 @@ select {
   color: var(--text);
   background: var(--bg-elevated);
   box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.tab-donations {
+  flex: 0 0 auto;
+  min-width: auto;
+  white-space: nowrap;
 }
 
 .card {
@@ -512,6 +526,39 @@ tbody tr.selected {
   text-align: center;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.tip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tip-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+}
+
+.tip-title {
+  font-weight: 500;
+}
+
+.tip-price {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.success-banner {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(109, 159, 255, 0.12);
+  border: 1px solid rgba(109, 159, 255, 0.35);
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
 .modal-backdrop {

@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.2.0",
-    "@capacitor/core": "^7.2.0"
+    "@capacitor/core": "^7.2.0",
+    "@capgo/native-purchases": "^7.16.2"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.2.0",

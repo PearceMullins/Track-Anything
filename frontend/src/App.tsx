@@ -9,6 +9,7 @@ import { ManageListModal, type ManageKind } from "./components/ManageListModal";
 import { ProfileBar } from "./components/ProfileBar";
 import { DeleteAllModal } from "./components/DeleteAllModal";
 import { ManageProfilesModal } from "./components/ManageProfilesModal";
+import { SupportModal } from "./components/SupportModal";
 import { loadUiState, saveUiState, flushUiState, type AppTab } from "./uiState";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
   const [deleteAll, setDeleteAll] = useState(false);
   const [chartsSnapshot, setChartsSnapshot] = useState<Bootstrap | null>(null);
   const [historyReady, setHistoryReady] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const lastProfileRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
@@ -132,6 +134,9 @@ export default function App() {
         >
           Progress Charts
         </button>
+        <button type="button" className="tab tab-donations" onClick={() => setSupportOpen(true)}>
+          Donations
+        </button>
       </nav>
 
       <div className="tab-panels">
@@ -162,6 +167,8 @@ export default function App() {
       <footer className="footer">
         Total adds up the numbers in each entry&apos;s values (e.g. 10 reps + 5 reps = 15).
       </footer>
+
+      {supportOpen && <SupportModal onClose={() => setSupportOpen(false)} />}
 
       {manage && (
         <ManageListModal

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 import api
 from data_store import WorkoutStore
+from profile_manager import ProfileManager
 
 
 @pytest.fixture
@@ -21,6 +22,6 @@ def store(data_path: Path) -> WorkoutStore:
 
 @pytest.fixture
 def client(data_path: Path):
-    api.store = WorkoutStore(data_path)
+    api.profiles = ProfileManager(data_path)
     with TestClient(api.app) as test_client:
         yield test_client

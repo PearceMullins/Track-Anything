@@ -10,10 +10,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from data_store import WorkoutStore
 from models import WorkoutEntry, logged_at_for_workout_date, normalize_exercise_name, normalize_value_text
+from profile_manager import ProfileManager
 
-store = WorkoutStore()
+profiles = ProfileManager()
 DIST = Path(__file__).parent / "frontend" / "dist"
 
 app = FastAPI(title="Track Anything API")
@@ -43,6 +43,18 @@ class RenameInput(BaseModel):
     new_value: str
 
 
+class DeleteNamesInput(BaseModel):
+    names: list[str] = Field(min_length=1)
+
+
+class ProfileNameInput(BaseModel):
+    name: str
+
+
+def _store():
+    return profiles.store
+
+
 def _serialize_entry(index: int, entry: WorkoutEntry) -> dict:
     return {
         "index": index,
@@ -60,7 +72,7 @@ def _format_total(volume: float) -> str:
 
 def _history_rows() -> list[dict]:
     rows: list[dict] = []
-    for index, entry in enumerate(store.entries):
+    for index, entry in enumerate(_store().entries):
         labels = [label.strip() or "—" for label in entry.set_labels]
         rows.append(
             {
@@ -78,6 +90,7 @@ def _history_rows() -> list[dict]:
 
 
 def _bootstrap() -> dict:
+    store = _store()
     return {
         "entries": [_serialize_entry(i, e) for i, e in enumerate(store.entries)],
         "history_rows": _history_rows(),
@@ -85,6 +98,8 @@ def _bootstrap() -> dict:
         "dropdown_set_labels": store.dropdown_set_labels(),
         "dropdown_values": store.dropdown_values(),
         "chart_names": store.exercise_names(),
+        "active_profile": profiles.active_profile,
+        "dropdown_profiles": profiles.dropdown_profiles(),
     }
 
 
@@ -127,12 +142,13 @@ def get_bootstrap() -> dict:
 @app.post("/api/entries")
 def create_entry(data: EntryInput) -> dict:
     entry = _entry_from_input(data)
-    store.add(entry)
+    _store().add(entry)
     return _bootstrap()
 
 
 @app.put("/api/entries/{index}")
 def update_entry(index: int, data: EntryInput) -> dict:
+    store = _store()
     if index < 0 or index >= len(store.entries):
         raise HTTPException(404, "Entry not found.")
     entry = _entry_from_input(data)
@@ -143,6 +159,7 @@ def update_entry(index: int, data: EntryInput) -> dict:
 
 @app.delete("/api/entries/{index}")
 def delete_entry(index: int) -> dict:
+    store = _store()
     if index < 0 or index >= len(store.entries):
         raise HTTPException(404, "Entry not found.")
     store.delete(index)
@@ -151,7 +168,7 @@ def delete_entry(index: int) -> dict:
 
 @app.get("/api/charts/{name}")
 def chart_points(name: str) -> dict:
-    points = store.history_points(name)
+    points = _store().history_points(name)
     return {
         "name": name,
         "points": [{"date": dt.isoformat(), "total": vol} for dt, vol in points],
@@ -161,7 +178,7 @@ def chart_points(name: str) -> dict:
 @app.post("/api/names/rename")
 def rename_name(body: RenameInput) -> dict:
     try:
-        store.rename_name(body.old_value, body.new_value)
+        _store().rename_name(body.old_value, body.new_value)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return _bootstrap()
@@ -169,14 +186,47 @@ def rename_name(body: RenameInput) -> dict:
 
 @app.post("/api/names/remove")
 def remove_name(body: dict) -> dict:
-    store.remove_name(body.get("name", ""))
+    _store().remove_name(body.get("name", ""))
+    return _bootstrap()
+
+
+@app.post("/api/names/delete-all")
+def delete_names(body: DeleteNamesInput) -> dict:
+    profiles.remove_names(body.names)
+    return _bootstrap()
+
+
+@app.post("/api/profiles/switch")
+def switch_profile(body: ProfileNameInput) -> dict:
+    try:
+        profiles.switch_profile(body.name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _bootstrap()
+
+
+@app.post("/api/profiles/rename")
+def rename_profile(body: RenameInput) -> dict:
+    try:
+        profiles.rename_profile(body.old_value, body.new_value)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _bootstrap()
+
+
+@app.post("/api/profiles/remove")
+def remove_profile(body: ProfileNameInput) -> dict:
+    try:
+        profiles.remove_profile(body.name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     return _bootstrap()
 
 
 @app.post("/api/labels/rename")
 def rename_label(body: RenameInput) -> dict:
     try:
-        store.rename_set_label(body.old_value, body.new_value)
+        _store().rename_set_label(body.old_value, body.new_value)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return _bootstrap()
@@ -184,14 +234,14 @@ def rename_label(body: RenameInput) -> dict:
 
 @app.post("/api/labels/remove")
 def remove_label(body: dict) -> dict:
-    store.remove_set_label(body.get("name", ""))
+    _store().remove_set_label(body.get("name", ""))
     return _bootstrap()
 
 
 @app.post("/api/values/rename")
 def rename_value(body: RenameInput) -> dict:
     try:
-        store.rename_value(body.old_value, body.new_value)
+        _store().rename_value(body.old_value, body.new_value)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return _bootstrap()
@@ -199,7 +249,7 @@ def rename_value(body: RenameInput) -> dict:
 
 @app.post("/api/values/remove")
 def remove_value(body: dict) -> dict:
-    store.remove_value(body.get("name", ""))
+    _store().remove_value(body.get("name", ""))
     return _bootstrap()
 
 

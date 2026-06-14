@@ -1,5 +1,5 @@
 import { afterEach, beforeEach } from "vitest";
-import { resetLocalStoreForTests } from "../data/store";
+import { resetProfileManagerForTests } from "../data/profileManager";
 
 const memory = new Map<string, string>();
 
@@ -31,10 +31,10 @@ Object.defineProperty(globalThis, "localStorage", {
 
 beforeEach(() => {
   memory.clear();
-  resetLocalStoreForTests();
+  resetProfileManagerForTests();
 });
 
 afterEach(() => {
   memory.clear();
-  resetLocalStoreForTests();
+  resetProfileManagerForTests();
 });

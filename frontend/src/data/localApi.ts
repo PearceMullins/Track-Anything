@@ -2,10 +2,11 @@
 
 import type { Bootstrap, ChartPoint } from "../types";
 import { buildBootstrap, entryFromInput, type EntryInput } from "./bootstrap";
-import { getLocalStore } from "./store";
+import { getProfileManager } from "./profileManager";
 
 function bootstrap(): Bootstrap {
-  return buildBootstrap(getLocalStore());
+  const pm = getProfileManager();
+  return buildBootstrap(pm.workoutStore, pm.activeProfile, pm.dropdownProfiles());
 }
 
 export function localFetchBootstrap(): Bootstrap {
@@ -13,13 +14,12 @@ export function localFetchBootstrap(): Bootstrap {
 }
 
 export function localCreateEntry(body: EntryInput): Bootstrap {
-  const store = getLocalStore();
-  store.add(entryFromInput(body));
+  getProfileManager().workoutStore.add(entryFromInput(body));
   return bootstrap();
 }
 
 export function localUpdateEntry(index: number, body: EntryInput): Bootstrap {
-  const store = getLocalStore();
+  const store = getProfileManager().workoutStore;
   if (index < 0 || index >= store.entries.length) {
     throw new Error("Entry not found.");
   }
@@ -30,7 +30,7 @@ export function localUpdateEntry(index: number, body: EntryInput): Bootstrap {
 }
 
 export function localDeleteEntry(index: number): Bootstrap {
-  const store = getLocalStore();
+  const store = getProfileManager().workoutStore;
   if (index < 0 || index >= store.entries.length) {
     throw new Error("Entry not found.");
   }
@@ -39,35 +39,55 @@ export function localDeleteEntry(index: number): Bootstrap {
 }
 
 export function localFetchChart(name: string): { name: string; points: ChartPoint[] } {
-  return { name, points: getLocalStore().historyPoints(name) };
+  return { name, points: getProfileManager().workoutStore.historyPoints(name) };
 }
 
 export function localRenameName(oldValue: string, newValue: string): Bootstrap {
-  getLocalStore().renameName(oldValue, newValue);
+  getProfileManager().workoutStore.renameName(oldValue, newValue);
   return bootstrap();
 }
 
 export function localRemoveName(name: string): Bootstrap {
-  getLocalStore().removeName(name);
+  getProfileManager().workoutStore.removeName(name);
+  return bootstrap();
+}
+
+export function localDeleteNames(names: string[]): Bootstrap {
+  getProfileManager().removeNames(names);
+  return bootstrap();
+}
+
+export function localSwitchProfile(name: string): Bootstrap {
+  getProfileManager().switchProfile(name);
+  return bootstrap();
+}
+
+export function localRenameProfile(oldValue: string, newValue: string): Bootstrap {
+  getProfileManager().renameProfile(oldValue, newValue);
+  return bootstrap();
+}
+
+export function localRemoveProfile(name: string): Bootstrap {
+  getProfileManager().removeProfile(name);
   return bootstrap();
 }
 
 export function localRenameLabel(oldValue: string, newValue: string): Bootstrap {
-  getLocalStore().renameSetLabel(oldValue, newValue);
+  getProfileManager().workoutStore.renameSetLabel(oldValue, newValue);
   return bootstrap();
 }
 
 export function localRemoveLabel(name: string): Bootstrap {
-  getLocalStore().removeSetLabel(name);
+  getProfileManager().workoutStore.removeSetLabel(name);
   return bootstrap();
 }
 
 export function localRenameValue(oldValue: string, newValue: string): Bootstrap {
-  getLocalStore().renameValue(oldValue, newValue);
+  getProfileManager().workoutStore.renameValue(oldValue, newValue);
   return bootstrap();
 }
 
 export function localRemoveValue(name: string): Bootstrap {
-  getLocalStore().removeValue(name);
+  getProfileManager().workoutStore.removeValue(name);
   return bootstrap();
 }

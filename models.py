@@ -13,6 +13,8 @@ LABEL_SUGGESTIONS = ("first set", "second set", "third set", "Morning", "Evening
 
 VALUE_SUGGESTIONS = ("10 reps", "5 reps", "20 reps", "3 miles", "30 minutes", "200 lbs", "150 lbs")
 
+DEFAULT_PROFILE = "Default"
+
 
 @dataclass
 class WorkoutEntry:
@@ -68,6 +70,10 @@ def normalize_unit(unit: str) -> str:
 
 
 def normalize_exercise_name(name: str) -> str:
+    return " ".join(name.strip().split())
+
+
+def normalize_profile_name(name: str) -> str:
     return " ".join(name.strip().split())
 
 

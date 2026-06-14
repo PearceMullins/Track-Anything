@@ -18,6 +18,8 @@ def test_bootstrap_empty(client):
     assert "Calories" in data["dropdown_names"]
     assert "first set" in data["dropdown_set_labels"]
     assert "10 reps" in data["dropdown_values"]
+    assert data["active_profile"] == "Default"
+    assert "Default" in data["dropdown_profiles"]
 
 
 def test_create_entry_returns_bootstrap(client):

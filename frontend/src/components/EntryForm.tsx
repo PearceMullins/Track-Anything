@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Bootstrap } from "../types";
 import * as api from "../api";
 import { ComboInput } from "./ComboInput";
@@ -6,11 +6,7 @@ import { DateInput } from "./DateInput";
 import { SuggestionInput } from "./SuggestionInput";
 import { displayToIso, todayDisplay } from "../dateFormat";
 import { labelPlaceholder } from "../labelPlaceholder";
-
-interface RowState {
-  label: string;
-  value: string;
-}
+import { clearEntryDraft, loadUiSlice, saveUiSlice, type EntryDraftRow } from "../uiState";
 
 interface EntryFormProps {
   data: Bootstrap;
@@ -18,19 +14,47 @@ interface EntryFormProps {
   onManage: (kind: "names" | "labels" | "values") => void;
 }
 
-function emptyRow(): RowState {
+function emptyRow(): EntryDraftRow {
   return { label: "", value: "" };
 }
 
+function initialDraft(profile: string) {
+  const saved = loadUiSlice(profile).entryDraft;
+  return {
+    name: saved?.name ?? "",
+    date: saved?.date || todayDisplay(),
+    notes: saved?.notes ?? "",
+    rows: saved?.rows?.length ? saved.rows : [emptyRow()],
+  };
+}
+
+function freshDraft() {
+  return {
+    name: "",
+    date: todayDisplay(),
+    notes: "",
+    rows: [emptyRow()],
+  };
+}
+
 export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
-  const [name, setName] = useState("");
-  const [date, setDate] = useState(todayDisplay());
-  const [notes, setNotes] = useState("");
-  const [rows, setRows] = useState<RowState[]>([emptyRow()]);
+  const profile = data.active_profile;
+  const dropdownNames = useMemo(() => data.dropdown_names, [data.dropdown_names]);
+  const dropdownLabels = useMemo(() => data.dropdown_set_labels, [data.dropdown_set_labels]);
+  const dropdownValues = useMemo(() => data.dropdown_values, [data.dropdown_values]);
+  const [initial] = useState(() => initialDraft(profile));
+  const [name, setName] = useState(initial.name);
+  const [date, setDate] = useState(initial.date);
+  const [notes, setNotes] = useState(initial.notes);
+  const [rows, setRows] = useState<EntryDraftRow[]>(initial.rows);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const updateRow = (index: number, patch: Partial<RowState>) => {
+  useEffect(() => {
+    saveUiSlice(profile, { entryDraft: { name, date, notes, rows } });
+  }, [profile, name, date, notes, rows]);
+
+  const updateRow = (index: number, patch: Partial<EntryDraftRow>) => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   };
 
@@ -42,10 +66,12 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
   };
 
   const reset = () => {
-    setName("");
-    setNotes("");
-    setDate(todayDisplay());
-    setRows([emptyRow()]);
+    const draft = freshDraft();
+    setName(draft.name);
+    setNotes(draft.notes);
+    setDate(draft.date);
+    setRows(draft.rows);
+    clearEntryDraft(profile, draft);
   };
 
   const save = async () => {
@@ -81,7 +107,7 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
           <ComboInput
             label="Name"
             value={name}
-            options={data.dropdown_names}
+            options={dropdownNames}
             onChange={setName}
             placeholder="Pushups"
           />
@@ -103,13 +129,13 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
         <div className="row-line" key={i}>
           <SuggestionInput
             value={row.label}
-            options={data.dropdown_set_labels}
+            options={dropdownLabels}
             onChange={(label) => updateRow(i, { label })}
             placeholder={labelPlaceholder(i)}
           />
           <SuggestionInput
             value={row.value}
-            options={data.dropdown_values}
+            options={dropdownValues}
             onChange={(value) => updateRow(i, { value })}
             placeholder="10 reps"
           />

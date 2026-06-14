@@ -17,7 +17,7 @@ import {
 
 const STORAGE_KEY = "track_anything_data";
 
-interface PersistedPayload {
+export interface PersistedPayload {
   entries: WorkoutEntry[];
   hidden_names: string[];
   custom_names: string[];
@@ -29,7 +29,7 @@ interface PersistedPayload {
   custom_values: string[];
 }
 
-function emptyPayload(): PersistedPayload {
+export function emptyPayload(): PersistedPayload {
   return {
     entries: [],
     hidden_names: [],
@@ -51,9 +51,39 @@ function chartDatetime(workoutDate: string, sameDayIndex: number): Date {
 
 export class LocalWorkoutStore {
   private payload: PersistedPayload = emptyPayload();
+  private autosave: boolean;
+  private persistHandler: ((payload: PersistedPayload) => void) | null = null;
+  private listCache: {
+    exercises?: string[];
+    names?: string[];
+    labels?: string[];
+    values?: string[];
+  } = {};
 
-  constructor() {
-    this.load();
+  constructor(options?: { autosave?: boolean }) {
+    this.autosave = options?.autosave !== false;
+    if (this.autosave) {
+      this.load();
+    }
+  }
+
+  setPersistHandler(handler: ((payload: PersistedPayload) => void) | null): void {
+    this.persistHandler = handler;
+    this.autosave = false;
+  }
+
+  toPayload(): PersistedPayload {
+    return JSON.parse(JSON.stringify(this.payload)) as PersistedPayload;
+  }
+
+  clonePayload(): PersistedPayload {
+    return this.toPayload();
+  }
+
+  loadPayload(raw: PersistedPayload): void {
+    const changed = this.loadFromRaw(raw);
+    this.bustListCache();
+    if (changed) this.save();
   }
 
   load(): void {
@@ -62,7 +92,15 @@ export class LocalWorkoutStore {
       this.payload = emptyPayload();
       return;
     }
-    const parsed = JSON.parse(raw) as PersistedPayload;
+    const parsed = JSON.parse(raw) as PersistedPayload & { profiles?: unknown };
+    if (parsed.profiles) {
+      this.payload = emptyPayload();
+      return;
+    }
+    this.loadFromRaw(parsed as PersistedPayload);
+  }
+
+  private loadFromRaw(parsed: PersistedPayload): boolean {
     this.payload = {
       ...emptyPayload(),
       ...parsed,
@@ -82,12 +120,20 @@ export class LocalWorkoutStore {
         canonicalValueText(normalizeValueText(v)),
       ),
     };
-    const changed = this.backfillLoggedAt();
-    if (changed) this.save();
+    return this.backfillLoggedAt();
   }
 
   save(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.payload));
+    this.bustListCache();
+    if (this.persistHandler) {
+      this.persistHandler(this.payload);
+    } else if (this.autosave) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.payload));
+    }
+  }
+
+  private bustListCache(): void {
+    this.listCache = {};
   }
 
   get entries(): WorkoutEntry[] {
@@ -121,44 +167,56 @@ export class LocalWorkoutStore {
   }
 
   exerciseNames(): string[] {
+    if (this.listCache.exercises) return this.listCache.exercises;
     const names = new Set(this.payload.entries.map((e) => e.exercise));
-    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const result = [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    this.listCache.exercises = result;
+    return result;
   }
 
   dropdownNames(): string[] {
+    if (this.listCache.names) return this.listCache.names;
     const names = new Set(this.exerciseNames());
     this.payload.custom_names.forEach((n) => names.add(n));
     NAME_SUGGESTIONS.forEach((s) => {
       if (!this.payload.hidden_names.includes(s)) names.add(s);
     });
     this.payload.hidden_names.forEach((n) => names.delete(n));
-    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const result = [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    this.listCache.names = result;
+    return result;
   }
 
   dropdownSetLabels(): string[] {
+    if (this.listCache.labels) return this.listCache.labels;
     const labels = new Set(this.usedSetLabels());
     this.payload.custom_set_labels.forEach((l) => labels.add(l));
     LABEL_SUGGESTIONS.forEach((s) => {
       if (!this.payload.hidden_set_labels.includes(s)) labels.add(s);
     });
     this.payload.hidden_set_labels.forEach((l) => labels.delete(l));
-    return [...labels]
+    const result = [...labels]
       .map((l) => canonicalSetLabel(l))
       .filter((l, i, arr) => arr.findIndex((x) => x.toLowerCase() === l.toLowerCase()) === i)
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    this.listCache.labels = result;
+    return result;
   }
 
   dropdownValues(): string[] {
+    if (this.listCache.values) return this.listCache.values;
     const values = new Set(this.usedValues());
     this.payload.custom_values.forEach((v) => values.add(v));
     VALUE_SUGGESTIONS.forEach((s) => {
       if (!this.payload.hidden_values.includes(s)) values.add(s);
     });
     this.payload.hidden_values.forEach((v) => values.delete(v));
-    return [...values]
+    const result = [...values]
       .map((v) => canonicalValueText(v))
       .filter((v, i, arr) => arr.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i)
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    this.listCache.values = result;
+    return result;
   }
 
   renameName(oldName: string, newName: string): void {
@@ -187,12 +245,16 @@ export class LocalWorkoutStore {
 
   removeName(name: string): void {
     const normalized = normalizeExerciseName(name);
-    const before = this.payload.entries.length;
     this.payload.entries = this.payload.entries.filter((e) => e.exercise !== normalized);
-    void (before - this.payload.entries.length);
     this.payload.hidden_names = [...new Set([...this.payload.hidden_names, normalized])];
     this.payload.custom_names = this.payload.custom_names.filter((n) => n !== normalized);
     this.save();
+  }
+
+  removeNames(names: string[]): void {
+    for (const name of names) {
+      this.removeName(name);
+    }
   }
 
   renameSetLabel(oldLabel: string, newLabel: string): void {
@@ -335,15 +397,4 @@ export class LocalWorkoutStore {
     }
     return changed;
   }
-}
-
-let singleton: LocalWorkoutStore | null = null;
-
-export function getLocalStore(): LocalWorkoutStore {
-  if (!singleton) singleton = new LocalWorkoutStore();
-  return singleton;
-}
-
-export function resetLocalStoreForTests(): void {
-  singleton = null;
 }

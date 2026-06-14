@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from typing import Callable
+
 from models import (
     NAME_SUGGESTIONS,
     LABEL_SUGGESTIONS,
@@ -21,9 +23,24 @@ from paths import data_file
 DEFAULT_DATA_FILE = data_file()
 
 
+def empty_store_payload() -> dict:
+    return {
+        "entries": [],
+        "hidden_names": [],
+        "custom_names": [],
+        "hidden_units": [],
+        "custom_units": [],
+        "hidden_set_labels": [],
+        "custom_set_labels": [],
+        "hidden_values": [],
+        "custom_values": [],
+    }
+
+
 class WorkoutStore:
     def __init__(self, path: Path | None = None) -> None:
-        self.path = path or DEFAULT_DATA_FILE
+        self.path = path
+        self._on_persist: Callable[[dict], None] | None = None
         self._entries: list[WorkoutEntry] = []
         self._hidden_names: set[str] = set()
         self._custom_names: set[str] = set()
@@ -33,39 +50,36 @@ class WorkoutStore:
         self._custom_set_labels: set[str] = set()
         self._hidden_values: set[str] = set()
         self._custom_values: set[str] = set()
-        self.load()
+        if self.path is not None:
+            self.load()
+
+    def set_persist_hook(self, hook: Callable[[dict], None] | None) -> None:
+        self._on_persist = hook
 
     def load(self) -> None:
-        if not self.path.exists():
-            self._entries = []
-            self._hidden_names = set()
-            self._custom_names = set()
-            self._hidden_units = set()
-            self._custom_units = set()
-            self._hidden_set_labels = set()
-            self._custom_set_labels = set()
-            self._hidden_values = set()
-            self._custom_values = set()
+        if self.path is None or not self.path.exists():
+            self._reset_empty()
             return
         with open(self.path, encoding="utf-8") as f:
             raw = json.load(f)
-        self._entries = [WorkoutEntry.from_dict(item) for item in raw.get("entries", [])]
-        self._hidden_names = {normalize_exercise_name(n) for n in raw.get("hidden_names", [])}
-        self._custom_names = {normalize_exercise_name(n) for n in raw.get("custom_names", [])}
-        self._hidden_units = {normalize_unit(u) for u in raw.get("hidden_units", [])}
-        self._custom_units = {normalize_unit(u) for u in raw.get("custom_units", [])}
-        self._hidden_set_labels = {normalize_set_label(l) for l in raw.get("hidden_set_labels", [])}
-        self._custom_set_labels = {normalize_set_label(l) for l in raw.get("custom_set_labels", [])}
-        self._hidden_values = {normalize_value_text(v) for v in raw.get("hidden_values", [])}
-        self._custom_values = {normalize_value_text(v) for v in raw.get("custom_values", [])}
-        changed = self._backfill_logged_at()
-        if self._canonicalize_custom_lists():
-            changed = True
-        if changed:
-            self.save()
+        if "profiles" in raw:
+            self._reset_empty()
+            return
+        self.load_from_payload(raw)
 
-    def save(self) -> None:
-        payload = {
+    def _reset_empty(self) -> None:
+        self._entries = []
+        self._hidden_names = set()
+        self._custom_names = set()
+        self._hidden_units = set()
+        self._custom_units = set()
+        self._hidden_set_labels = set()
+        self._custom_set_labels = set()
+        self._hidden_values = set()
+        self._custom_values = set()
+
+    def to_payload(self) -> dict:
+        return {
             "entries": [e.to_dict() for e in self._entries],
             "hidden_names": sorted(self._hidden_names, key=str.lower),
             "custom_names": sorted(self._custom_names, key=str.lower),
@@ -76,8 +90,28 @@ class WorkoutStore:
             "hidden_values": sorted(self._hidden_values, key=str.lower),
             "custom_values": sorted(self._custom_values, key=str.lower),
         }
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+
+    def load_from_payload(self, raw: dict) -> None:
+        self._entries = [WorkoutEntry.from_dict(item) for item in raw.get("entries", [])]
+        self._hidden_names = {normalize_exercise_name(n) for n in raw.get("hidden_names", [])}
+        self._custom_names = {normalize_exercise_name(n) for n in raw.get("custom_names", [])}
+        self._hidden_units = {normalize_unit(u) for u in raw.get("hidden_units", [])}
+        self._custom_units = {normalize_unit(u) for u in raw.get("custom_units", [])}
+        self._hidden_set_labels = {normalize_set_label(l) for l in raw.get("hidden_set_labels", [])}
+        self._custom_set_labels = {normalize_set_label(l) for l in raw.get("custom_set_labels", [])}
+        self._hidden_values = {normalize_value_text(v) for v in raw.get("hidden_values", [])}
+        self._custom_values = {normalize_value_text(v) for v in raw.get("custom_values", [])}
+        self._backfill_logged_at()
+        if self._canonicalize_custom_lists():
+            self.save()
+
+    def save(self) -> None:
+        payload = self.to_payload()
+        if self._on_persist:
+            self._on_persist(payload)
+        elif self.path is not None:
+            with open(self.path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
 
     @property
     def entries(self) -> list[WorkoutEntry]:
@@ -161,6 +195,12 @@ class WorkoutStore:
         self._custom_names.discard(name)
         self.save()
         return deleted
+
+    def remove_names(self, names: list[str]) -> int:
+        total = 0
+        for name in names:
+            total += self.remove_name(name)
+        return total
 
     def used_units(self) -> set[str]:
         return {normalize_unit(e.unit) for e in self._entries if normalize_unit(e.unit)}

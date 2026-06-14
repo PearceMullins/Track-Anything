@@ -8,6 +8,8 @@ interface ComboInputProps {
   onChange: (value: string) => void;
   placeholder: string;
   listId?: string;
+  disabled?: boolean;
+  onBlur?: (value: string) => void;
 }
 
 export function ComboInput({
@@ -17,6 +19,8 @@ export function ComboInput({
   onChange,
   placeholder,
   listId,
+  disabled,
+  onBlur,
 }: ComboInputProps) {
   const autoId = useId();
   const id = listId ?? autoId;
@@ -30,6 +34,8 @@ export function ComboInput({
         options={options}
         onChange={onChange}
         placeholder={placeholder}
+        disabled={disabled}
+        onBlur={onBlur}
       />
     </div>
   );

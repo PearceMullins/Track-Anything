@@ -33,6 +33,8 @@ export interface Bootstrap {
   dropdown_set_labels: string[];
   dropdown_values: string[];
   chart_names: string[];
+  active_profile: string;
+  dropdown_profiles: string[];
 }
 
 export interface ChartPoint {

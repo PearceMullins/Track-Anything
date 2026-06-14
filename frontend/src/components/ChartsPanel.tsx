@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -8,8 +8,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { Bootstrap, ChartPoint } from "../types";
-import * as api from "../api";
+import type { Bootstrap, EntryRecord } from "../types";
+import { chartPointsForExercise } from "../chartData";
+import { loadUiSlice, saveUiSlice } from "../uiState";
 
 interface ChartsPanelProps {
   data: Bootstrap;
@@ -29,25 +30,16 @@ function yLimits(values: number[]): [number, number] {
   return [min - pad, max + pad];
 }
 
-function ChartBlock({ name, chartId }: { name: string; chartId: string }) {
-  const [points, setPoints] = useState<ChartPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    api
-      .fetchChart(name)
-      .then((res) => {
-        if (!cancelled) setPoints(res.points);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [name]);
+const ChartBlock = memo(function ChartBlock({
+  name,
+  chartId,
+  entries,
+}: {
+  name: string;
+  chartId: string;
+  entries: EntryRecord[];
+}) {
+  const points = useMemo(() => chartPointsForExercise(entries, name), [entries, name]);
 
   const chartData = useMemo(
     () => points.map((p) => ({ ...p, label: formatDate(p.date) })),
@@ -55,7 +47,6 @@ function ChartBlock({ name, chartId }: { name: string; chartId: string }) {
   );
   const [yMin, yMax] = yLimits(points.map((p) => p.total));
 
-  if (loading) return <p className="empty">Loading chart…</p>;
   if (points.length === 0) return <p className="empty">No data for {name}.</p>;
 
   return (
@@ -104,22 +95,21 @@ function ChartBlock({ name, chartId }: { name: string; chartId: string }) {
       </AreaChart>
     </ResponsiveContainer>
   );
-}
+});
 
 export function ChartsPanel({ data }: ChartsPanelProps) {
+  const profile = data.active_profile;
   const names = data.chart_names;
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(names));
+  const entries = data.entries;
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const saved = loadUiSlice(profile).chartSelected;
+    if (saved?.length) return new Set(saved.filter((n) => names.includes(n)));
+    return new Set(names);
+  });
 
   useEffect(() => {
-    setSelected((prev) => {
-      const next = new Set<string>();
-      for (const n of names) {
-        if (prev.has(n)) next.add(n);
-      }
-      if (next.size === 0 && names.length) names.forEach((n) => next.add(n));
-      return next;
-    });
-  }, [names]);
+    saveUiSlice(profile, { chartSelected: [...selected] });
+  }, [profile, selected]);
 
   const toggle = (name: string) => {
     setSelected((prev) => {
@@ -172,7 +162,7 @@ export function ChartsPanel({ data }: ChartsPanelProps) {
         active.map((name, i) => (
           <section key={name} className="card chart-card">
             <h3>{name} — total over time</h3>
-            <ChartBlock name={name} chartId={`c${i}`} />
+            <ChartBlock name={name} chartId={`c${i}`} entries={entries} />
           </section>
         ))
       )}

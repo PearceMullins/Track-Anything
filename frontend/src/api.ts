@@ -99,3 +99,26 @@ export function removeValue(name: string): Promise<Bootstrap> {
   if (isLocalMode()) return runLocal(() => local.localRemoveValue(name));
   return request("/values/remove", { method: "POST", body: JSON.stringify({ name }) });
 }
+
+export function deleteAllNames(names: string[]): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localDeleteNames(names));
+  return request("/names/delete-all", { method: "POST", body: JSON.stringify({ names }) });
+}
+
+export function switchProfile(name: string): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localSwitchProfile(name));
+  return request("/profiles/switch", { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export function renameProfile(oldValue: string, newValue: string): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localRenameProfile(oldValue, newValue));
+  return request("/profiles/rename", {
+    method: "POST",
+    body: JSON.stringify({ old_value: oldValue, new_value: newValue }),
+  });
+}
+
+export function removeProfile(name: string): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localRemoveProfile(name));
+  return request("/profiles/remove", { method: "POST", body: JSON.stringify({ name }) });
+}

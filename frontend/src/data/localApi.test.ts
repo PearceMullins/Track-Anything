@@ -28,7 +28,7 @@ describe("local store", () => {
       workout_date: "2026-06-01",
       rows: [{ label: "Miles", value: "3 miles" }],
     });
-    expect(localStorage.getItem("track_anything_data")).toContain("Running");
+    expect(localStorage.getItem("track_anything_p:Default")).toContain("Running");
     expect(localFetchBootstrap().entries[0].exercise).toBe("Running");
   });
 });

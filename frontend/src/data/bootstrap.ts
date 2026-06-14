@@ -27,29 +27,45 @@ function formatTotal(volume: number): string {
   return volume === Math.trunc(volume) ? String(Math.trunc(volume)) : String(volume);
 }
 
-export function buildBootstrap(store: LocalWorkoutStore): Bootstrap {
-  const entries = store.entries;
-  return {
-    entries: entries.map((entry, index) => ({
+export function buildBootstrap(
+  store: LocalWorkoutStore,
+  activeProfile: string,
+  dropdownProfiles: string[],
+): Bootstrap {
+  const rawEntries = store.entries;
+  const entries = new Array(rawEntries.length);
+  const history_rows = new Array(rawEntries.length);
+
+  for (let index = 0; index < rawEntries.length; index++) {
+    const entry = rawEntries[index];
+    const volume = entryVolume(entry);
+    entries[index] = {
       index,
       ...entry,
-      volume: entryVolume(entry),
+      volume,
       set_count: entry.set_values.length,
-    })),
-    history_rows: entries.map((entry, entry_index) => ({
-      entry_index,
+    };
+    history_rows[index] = {
+      entry_index: index,
       workout_date: entry.workout_date,
       name: entry.exercise,
       labels: entry.set_labels.map((label) => label.trim() || "—"),
-      values: [...entry.set_values],
+      values: entry.set_values,
       notes: entry.notes,
-      total: entryVolume(entry),
-      total_display: formatTotal(entryVolume(entry)),
-    })),
+      total: volume,
+      total_display: formatTotal(volume),
+    };
+  }
+
+  return {
+    entries,
+    history_rows,
     dropdown_names: store.dropdownNames(),
     dropdown_set_labels: store.dropdownSetLabels(),
     dropdown_values: store.dropdownValues(),
     chart_names: store.exerciseNames(),
+    active_profile: activeProfile,
+    dropdown_profiles: dropdownProfiles,
   };
 }
 

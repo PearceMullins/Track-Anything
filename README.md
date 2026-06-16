@@ -1,4 +1,10 @@
 <p align="center">
+  <a href="https://patreon.com/TrackAnything?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink">
+    <img src="https://img.shields.io/badge/Patreon-FF424D?style=for-the-badge&logo=patreon&logoColor=white" alt="Patreon" />
+  </a>
+</p>
+
+<p align="center">
   <a href="README.md"><strong>README</strong></a>
   ·
   <a href="CONTRIBUTING.md">Contributing</a>

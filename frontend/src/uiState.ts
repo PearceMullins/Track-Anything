@@ -14,6 +14,8 @@ export interface EntryDraft {
 
 export interface ProfileUiSlice {
   entryDraft?: EntryDraft;
+  /** ISO calendar day (YYYY-MM-DD) when entryDraft was last updated. */
+  entryDraftDay?: string;
   chartSelected?: string[];
   historyDisplayNames?: string[];
   historySelected?: number | null;

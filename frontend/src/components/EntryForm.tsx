@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bootstrap } from "../types";
 import * as api from "../api";
 import { ComboInput } from "./ComboInput";
 import { DateInput } from "./DateInput";
 import { SuggestionInput } from "./SuggestionInput";
-import { displayToIso, todayDisplay } from "../dateFormat";
+import { displayToIso, resolveEntryDraftDate, todayDisplay, todayIso } from "../dateFormat";
 import { labelPlaceholder } from "../labelPlaceholder";
 import { clearEntryDraft, loadUiSlice, saveUiSlice, type EntryDraftRow } from "../uiState";
 
@@ -19,12 +19,13 @@ function emptyRow(): EntryDraftRow {
 }
 
 function initialDraft(profile: string) {
-  const saved = loadUiSlice(profile).entryDraft;
+  const saved = loadUiSlice(profile);
+  const draft = saved.entryDraft;
   return {
-    name: saved?.name ?? "",
-    date: saved?.date || todayDisplay(),
-    notes: saved?.notes ?? "",
-    rows: saved?.rows?.length ? saved.rows : [emptyRow()],
+    name: draft?.name ?? "",
+    date: resolveEntryDraftDate(draft?.date, saved.entryDraftDay),
+    notes: draft?.notes ?? "",
+    rows: draft?.rows?.length ? draft.rows : [emptyRow()],
   };
 }
 
@@ -49,10 +50,47 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
   const [rows, setRows] = useState<EntryDraftRow[]>(initial.rows);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const draftRef = useRef({ name, date, notes, rows });
 
   useEffect(() => {
-    saveUiSlice(profile, { entryDraft: { name, date, notes, rows } });
+    draftRef.current = { name, date, notes, rows };
+  }, [name, date, notes, rows]);
+
+  useEffect(() => {
+    saveUiSlice(profile, {
+      entryDraftDay: todayIso(),
+      entryDraft: { name, date, notes, rows },
+    });
   }, [profile, name, date, notes, rows]);
+
+  useEffect(() => {
+    const syncDateForNewDay = () => {
+      const today = todayIso();
+      const savedDay = loadUiSlice(profile).entryDraftDay;
+      if (savedDay === today) return;
+      const next = todayDisplay();
+      setDate(next);
+      const draft = draftRef.current;
+      saveUiSlice(profile, {
+        entryDraftDay: today,
+        entryDraft: { ...draft, date: next },
+      });
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") syncDateForNewDay();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") syncDateForNewDay();
+    }, 60_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(timer);
+    };
+  }, [profile]);
 
   const updateRow = (index: number, patch: Partial<EntryDraftRow>) => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));

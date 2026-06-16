@@ -37,3 +37,15 @@ export function todayIso(): string {
 export function todayDisplay(): string {
   return isoToDisplay(todayIso());
 }
+
+/** Use saved draft date only when the draft was touched on the same calendar day. */
+export function resolveEntryDraftDate(
+  savedDate: string | undefined,
+  savedCalendarDay: string | undefined,
+): string {
+  const today = todayIso();
+  if (!savedCalendarDay || savedCalendarDay !== today) {
+    return todayDisplay();
+  }
+  return savedDate || todayDisplay();
+}

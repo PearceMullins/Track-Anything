@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayToIso, isoToDisplay, todayDisplay, todayIso } from "./dateFormat";
+import { displayToIso, isoToDisplay, resolveEntryDraftDate, todayDisplay, todayIso } from "./dateFormat";
 
 describe("dateFormat", () => {
   it("converts ISO to MM/DD/YYYY", () => {
@@ -17,5 +17,11 @@ describe("dateFormat", () => {
 
   it("today helpers stay in sync", () => {
     expect(isoToDisplay(todayIso())).toBe(todayDisplay());
+  });
+
+  it("rolls draft date forward when the calendar day changed", () => {
+    expect(resolveEntryDraftDate("06/13/2026", "2026-06-13")).toBe(todayDisplay());
+    expect(resolveEntryDraftDate("06/10/2026", todayIso())).toBe("06/10/2026");
+    expect(resolveEntryDraftDate(undefined, todayIso())).toBe(todayDisplay());
   });
 });

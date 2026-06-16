@@ -72,6 +72,7 @@ class TrackAnythingApp(tk.Tk):
         self.charts_panel.refresh_exercises()
 
         notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+        self.bind("<FocusIn>", self._on_window_focus)
 
         footer = ttk.Frame(self, padding=(16, 8))
         footer.pack(side=tk.BOTTOM, fill=tk.X)
@@ -92,8 +93,13 @@ class TrackAnythingApp(tk.Tk):
         self.charts_panel.refresh_exercises()
 
     def _on_tab_changed(self, event: tk.Event) -> None:
-        if event.widget.index("current") == 1:
+        if event.widget.index("current") == 0:
+            self.entry_panel.refresh_date_for_new_day()
+        elif event.widget.index("current") == 1:
             self.charts_panel.refresh_charts()
+
+    def _on_window_focus(self, _event: tk.Event) -> None:
+        self.entry_panel.refresh_date_for_new_day()
 
 
 def run_app() -> None:

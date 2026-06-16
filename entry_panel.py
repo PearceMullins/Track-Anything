@@ -25,6 +25,7 @@ class EntryPanel(ttk.Frame):
         self.store = store
         self.on_save = on_save
         self.on_names_changed = on_names_changed
+        self._draft_calendar_day = today_iso()
         self._build()
         self.refresh_exercises()
 
@@ -168,6 +169,15 @@ class EntryPanel(ttk.Frame):
         self.on_save(entry)
         self._clear_form()
 
+    def refresh_date_for_new_day(self) -> None:
+        today = today_iso()
+        if self._draft_calendar_day != today:
+            self.date_var.set(today)
+            self._draft_calendar_day = today
+
     def _clear_form(self) -> None:
         self.set_rows.clear_values()
         self.notes_text.delete("1.0", tk.END)
+        today = today_iso()
+        self.date_var.set(today)
+        self._draft_calendar_day = today

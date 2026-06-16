@@ -1,7 +1,7 @@
 {
   "name": "track-anything-mobile",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Capacitor wrapper for Track Anything Android builds",
   "scripts": {
     "mobile:build": "cd frontend && npm run build:mobile && cd .. && npx cap sync android",

@@ -72,6 +72,16 @@ npx cap open android # build signed AAB in Android Studio
 
 See **[PLAY_STORE.md](PLAY_STORE.md)** for the full testing matrix, beta tracks, and Play Console checklist.
 
+## Privacy Policy
+
+GitHub Pages-ready policy: `docs/privacy-policy/index.html`
+
+After this repo is public and Pages is enabled from `main` / `docs`, use:
+
+```text
+https://pearcemullins.github.io/Track-Anything/privacy-policy/
+```
+
 ### Run all automated tests
 
 ```powershell

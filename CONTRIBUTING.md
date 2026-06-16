@@ -1,3 +1,15 @@
+<p align="center">
+  <a href="README.md">README</a>
+  ·
+  <a href="CONTRIBUTING.md"><strong>Contributing</strong></a>
+  ·
+  <a href="LICENSE">MIT license</a>
+  ·
+  <a href="PRIVACY.md">Privacy</a>
+  ·
+  <a href="SECURITY.md">Security</a>
+</p>
+
 # Contributing
 
 Thanks for your interest in Track Anything.

@@ -1,3 +1,15 @@
+<p align="center">
+  <a href="README.md">README</a>
+  ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+  ·
+  <a href="LICENSE">MIT license</a>
+  ·
+  <a href="PRIVACY.md">Privacy</a>
+  ·
+  <a href="SECURITY.md"><strong>Security</strong></a>
+</p>
+
 # Security Policy
 
 Please report security concerns through the developer contact listed on Google

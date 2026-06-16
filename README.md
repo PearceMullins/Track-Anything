@@ -1,4 +1,16 @@
 <p align="center">
+  <a href="README.md"><strong>README</strong></a>
+  ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+  ·
+  <a href="LICENSE">MIT license</a>
+  ·
+  <a href="PRIVACY.md">Privacy</a>
+  ·
+  <a href="SECURITY.md">Security</a>
+</p>
+
+<p align="center">
   <img src="assets/app.ico" width="96" height="96" alt="Track Anything icon" />
 </p>
 
@@ -12,6 +24,7 @@
   <a href="https://github.com/PearceMullins/Track-Anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/PearceMullins/Track-Anything/ci.yml?branch=main&label=CI" alt="CI status" /></a>
   <a href="https://github.com/PearceMullins/Track-Anything/releases"><img src="https://img.shields.io/github/v/release/PearceMullins/Track-Anything?label=release" alt="Latest release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
+  <a href="PRIVACY.md"><img src="https://img.shields.io/badge/policy-privacy-2d6a4f?style=flat-square" alt="Privacy Policy" /></a>
 </p>
 
 ---
@@ -142,8 +155,10 @@ Use one of these URLs in Google Play Console and other listings:
 | **After the repo is public** | `https://pearcemullins.github.io/Track-Anything/privacy-policy/` |
 
 GitHub Pages requires a **public** repository on the free plan. The
-[PRIVACY.md](PRIVACY.md) file at the repository root also appears as a **Privacy**
-tab on the GitHub project page, alongside README, Contributing, and Security.
+[PRIVACY.md](PRIVACY.md) file at the repository root contains the full policy with
+the same header style as this README. Use the **Privacy** link in the navigation
+row at the top of `README.md` and `PRIVACY.md`, or open `PRIVACY.md` directly
+from the file list.
 
 ## Tests
 

@@ -1,4 +1,16 @@
 <p align="center">
+  <a href="README.md">README</a>
+  ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+  ·
+  <a href="LICENSE">MIT license</a>
+  ·
+  <a href="PRIVACY.md"><strong>Privacy</strong></a>
+  ·
+  <a href="SECURITY.md">Security</a>
+</p>
+
+<p align="center">
   <img src="assets/app.ico" width="96" height="96" alt="Track Anything icon" />
 </p>
 

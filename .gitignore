@@ -1,0 +1,36 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+build/
+dist/
+release/
+*.spec
+*.tgz
+*.zip
+
+node_modules/
+frontend/dist/
+frontend/node_modules/
+*.tsbuildinfo
+
+# Generated assets (icons, store image drafts)
+output/
+
+# Capacitor / Android
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+
+track_anything_data.json
+workout_data.json
+.DS_Store
+Thumbs.db
+.idea/
+.serena/

@@ -5,18 +5,18 @@ import type { EntryRecord } from "./types";
 function entry(
   index: number,
   exercise: string,
-  workout_date: string,
+  entry_date: string,
   set_values: string[],
   volume: number,
 ): EntryRecord {
   return {
     index,
     exercise,
-    workout_date,
+    entry_date,
     set_values,
     set_labels: set_values.map((_, i) => `Set ${i + 1}`),
     notes: "",
-    logged_at: `${workout_date}T12:00:00`,
+    logged_at: `${entry_date}T12:00:00`,
     volume,
     set_count: set_values.length,
   };

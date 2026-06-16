@@ -10,7 +10,7 @@ from models import (
     NAME_SUGGESTIONS,
     LABEL_SUGGESTIONS,
     VALUE_SUGGESTIONS,
-    WorkoutEntry,
+    TrackEntry,
     normalize_exercise_name,
     normalize_set_label,
     normalize_unit,
@@ -37,11 +37,11 @@ def empty_store_payload() -> dict:
     }
 
 
-class WorkoutStore:
+class TrackStore:
     def __init__(self, path: Path | None = None) -> None:
         self.path = path
         self._on_persist: Callable[[dict], None] | None = None
-        self._entries: list[WorkoutEntry] = []
+        self._entries: list[TrackEntry] = []
         self._hidden_names: set[str] = set()
         self._custom_names: set[str] = set()
         self._hidden_units: set[str] = set()
@@ -92,7 +92,7 @@ class WorkoutStore:
         }
 
     def load_from_payload(self, raw: dict) -> None:
-        self._entries = [WorkoutEntry.from_dict(item) for item in raw.get("entries", [])]
+        self._entries = [TrackEntry.from_dict(item) for item in raw.get("entries", [])]
         self._hidden_names = {normalize_exercise_name(n) for n in raw.get("hidden_names", [])}
         self._custom_names = {normalize_exercise_name(n) for n in raw.get("custom_names", [])}
         self._hidden_units = {normalize_unit(u) for u in raw.get("hidden_units", [])}
@@ -114,15 +114,15 @@ class WorkoutStore:
                 json.dump(payload, f, indent=2)
 
     @property
-    def entries(self) -> list[WorkoutEntry]:
+    def entries(self) -> list[TrackEntry]:
         return list(self._entries)
 
-    def add(self, entry: WorkoutEntry) -> None:
+    def add(self, entry: TrackEntry) -> None:
         self._entries.append(entry)
         self._remember_entry_lists(entry)
         self.save()
 
-    def _remember_entry_lists(self, entry: WorkoutEntry) -> None:
+    def _remember_entry_lists(self, entry: TrackEntry) -> None:
         self._hidden_names.discard(normalize_exercise_name(entry.exercise))
         for label in entry.set_labels:
             normalized = normalize_set_label(label)
@@ -138,7 +138,7 @@ class WorkoutStore:
             del self._entries[index]
             self.save()
 
-    def update(self, index: int, entry: WorkoutEntry) -> None:
+    def update(self, index: int, entry: TrackEntry) -> None:
         if 0 <= index < len(self._entries):
             if not entry.logged_at:
                 entry.logged_at = self._entries[index].logged_at
@@ -342,26 +342,26 @@ class WorkoutStore:
         self._custom_values.discard(value)
         self.save()
 
-    def entries_for_exercise(self, exercise: str) -> list[WorkoutEntry]:
+    def entries_for_exercise(self, exercise: str) -> list[TrackEntry]:
         return [e for e in self._entries if e.exercise == exercise]
 
     def history_points(self, exercise: str) -> list[tuple[datetime, float]]:
         """Each logged entry is one chart point, positioned on its entry date."""
         entries = self.entries_for_exercise(exercise)
-        entries.sort(key=lambda e: (e.workout_date, e.logged_at or ""))
+        entries.sort(key=lambda e: (e.entry_date, e.logged_at or ""))
 
         same_day: dict[str, int] = {}
         points: list[tuple[datetime, float]] = []
         for entry in entries:
-            idx = same_day.get(entry.workout_date, 0)
-            same_day[entry.workout_date] = idx + 1
-            when = self._chart_datetime(entry.workout_date, idx)
+            idx = same_day.get(entry.entry_date, 0)
+            same_day[entry.entry_date] = idx + 1
+            when = self._chart_datetime(entry.entry_date, idx)
             points.append((when, entry.volume))
         return points
 
     @staticmethod
-    def _chart_datetime(workout_date: str, same_day_index: int = 0) -> datetime:
-        base = datetime.strptime(workout_date, "%Y-%m-%d")
+    def _chart_datetime(entry_date: str, same_day_index: int = 0) -> datetime:
+        base = datetime.strptime(entry_date, "%Y-%m-%d")
         return base.replace(hour=12, minute=0, second=0) + timedelta(minutes=same_day_index * 30)
 
     def _backfill_logged_at(self) -> bool:
@@ -371,10 +371,10 @@ class WorkoutStore:
         for entry in self._entries:
             if entry.logged_at:
                 continue
-            key = (entry.exercise, entry.workout_date)
+            key = (entry.exercise, entry.entry_date)
             idx = counts.get(key, 0)
             counts[key] = idx + 1
-            base = datetime.strptime(entry.workout_date, "%Y-%m-%d").replace(hour=8, minute=0)
+            base = datetime.strptime(entry.entry_date, "%Y-%m-%d").replace(hour=8, minute=0)
             entry.logged_at = (base + timedelta(hours=idx * 2)).isoformat(timespec="seconds")
             changed = True
         return changed

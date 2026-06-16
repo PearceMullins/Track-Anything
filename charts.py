@@ -6,12 +6,12 @@ import matplotlib.dates as mdates
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-from data_store import WorkoutStore
+from data_store import TrackStore
 from theme import COLORS
 
 
 def create_volume_figure(
-    store: WorkoutStore,
+    store: TrackStore,
     exercise: str,
     figsize: tuple[float, float] = (7, 4),
 ) -> Figure | None:

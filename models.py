@@ -17,11 +17,11 @@ DEFAULT_PROFILE = "Default"
 
 
 @dataclass
-class WorkoutEntry:
+class TrackEntry:
     """A single logged session for one tracked name."""
 
     exercise: str
-    workout_date: str  # ISO format YYYY-MM-DD
+    entry_date: str  # ISO format YYYY-MM-DD
     set_values: list[str]
     set_labels: list[str] = field(default_factory=list)
     notes: str = ""
@@ -45,7 +45,7 @@ class WorkoutEntry:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "WorkoutEntry":
+    def from_dict(cls, data: dict[str, Any]) -> "TrackEntry":
         unit = normalize_unit(data.get("unit", ""))
         set_values = [_coerce_value_text(v, unit) for v in data["set_values"]]
         raw_labels = data.get("set_labels")
@@ -54,9 +54,12 @@ class WorkoutEntry:
             if raw_labels is not None
             else align_set_labels([], len(set_values))
         )
+        entry_date = data.get("entry_date") or data.get("workout_date")
+        if not entry_date:
+            raise KeyError("entry_date")
         return cls(
             exercise=data["exercise"],
-            workout_date=data["workout_date"],
+            entry_date=entry_date,
             set_values=set_values,
             set_labels=set_labels,
             notes=data.get("notes", ""),
@@ -135,9 +138,9 @@ def today_iso() -> str:
     return date.today().isoformat()
 
 
-def logged_at_for_workout_date(workout_date: str) -> str:
+def logged_at_for_entry_date(entry_date: str) -> str:
     """Timestamp used for ordering entries that share the same date."""
-    picked = date.fromisoformat(workout_date)
+    picked = date.fromisoformat(entry_date)
     now = datetime.now()
     if picked == date.today():
         return datetime.combine(picked, now.time().replace(microsecond=0)).isoformat()

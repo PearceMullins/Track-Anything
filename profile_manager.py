@@ -5,24 +5,24 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from data_store import WorkoutStore, empty_store_payload
+from data_store import TrackStore, empty_store_payload
 from models import DEFAULT_PROFILE, normalize_profile_name
-from paths import data_file
+from paths import data_file, resolve_data_file
 
 
 class ProfileManager:
     def __init__(self, path: Path | None = None) -> None:
-        self.path = path or data_file()
+        self.path = path or resolve_data_file()
         self._active = DEFAULT_PROFILE
         self._profiles: dict[str, dict] = {DEFAULT_PROFILE: empty_store_payload()}
         self._hidden_profiles: set[str] = set()
         self._custom_profiles: set[str] = set()
-        self._store = WorkoutStore(path=None)
+        self._store = TrackStore(path=None)
         self._store.set_persist_hook(self._persist_active)
         self.load()
 
     @property
-    def store(self) -> WorkoutStore:
+    def store(self) -> TrackStore:
         return self._store
 
     @property
@@ -74,6 +74,9 @@ class ProfileManager:
             "hidden_profiles": sorted(self._hidden_profiles, key=str.lower),
             "custom_profiles": sorted(self._custom_profiles, key=str.lower),
         }
+        target = data_file()
+        if self.path != target:
+            self.path = target
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
 

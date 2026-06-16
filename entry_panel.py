@@ -4,11 +4,11 @@ import tkinter as tk
 from datetime import date
 from tkinter import messagebox, ttk
 
-from data_store import WorkoutStore
+from data_store import TrackStore
 from date_picker import DatePicker
 from models import (
-    WorkoutEntry,
-    logged_at_for_workout_date,
+    TrackEntry,
+    logged_at_for_entry_date,
     normalize_exercise_name,
     normalize_unit,
     today_iso,
@@ -20,7 +20,7 @@ from unit_manager import UnitManagerDialog
 
 
 class EntryPanel(ttk.Frame):
-    def __init__(self, parent, store: WorkoutStore, on_save, on_names_changed) -> None:
+    def __init__(self, parent, store: TrackStore, on_save, on_names_changed) -> None:
         super().__init__(parent)
         self.store = store
         self.on_save = on_save
@@ -133,9 +133,9 @@ class EntryPanel(ttk.Frame):
             messagebox.showwarning("Missing name", "Type a name to track.")
             return
 
-        workout_date = self.date_var.get().strip()
+        entry_date = self.date_var.get().strip()
         try:
-            date.fromisoformat(workout_date)
+            date.fromisoformat(entry_date)
         except ValueError:
             messagebox.showwarning("Invalid date", "Use YYYY-MM-DD format.")
             return
@@ -156,13 +156,13 @@ class EntryPanel(ttk.Frame):
             return
 
         notes = self.notes_text.get("1.0", tk.END).strip()
-        entry = WorkoutEntry(
+        entry = TrackEntry(
             exercise=exercise,
-            workout_date=workout_date,
+            entry_date=entry_date,
             set_values=set_values,
             set_labels=set_labels,
             notes=notes,
-            logged_at=logged_at_for_workout_date(workout_date),
+            logged_at=logged_at_for_entry_date(entry_date),
             unit=unit,
         )
         self.on_save(entry)

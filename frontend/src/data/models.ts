@@ -27,9 +27,9 @@ export const VALUE_SUGGESTIONS = [
   "150 lbs",
 ] as const;
 
-export interface WorkoutEntry {
+export interface TrackEntry {
   exercise: string;
-  workout_date: string;
+  entry_date: string;
   set_values: string[];
   set_labels: string[];
   notes: string;
@@ -91,7 +91,7 @@ function coerceValueText(raw: unknown, unit: string): string {
   return unit ? `${text} ${unit}` : text;
 }
 
-export function entryFromDict(data: Record<string, unknown>): WorkoutEntry {
+export function entryFromDict(data: Record<string, unknown>): TrackEntry {
   const unit = normalizeUnit(String(data.unit ?? ""));
   const rawValues = data.set_values as unknown[];
   const set_values = rawValues.map((v) => coerceValueText(v, unit));
@@ -100,9 +100,10 @@ export function entryFromDict(data: Record<string, unknown>): WorkoutEntry {
     rawLabels ? rawLabels.map(String) : [],
     set_values.length,
   );
+  const entry_date = String(data.entry_date ?? data.workout_date ?? "");
   return {
     exercise: String(data.exercise),
-    workout_date: String(data.workout_date),
+    entry_date,
     set_values: set_values.map((v) => canonicalValueText(normalizeValueText(v))),
     set_labels: set_labels.map(canonicalSetLabel),
     notes: String(data.notes ?? ""),
@@ -111,7 +112,7 @@ export function entryFromDict(data: Record<string, unknown>): WorkoutEntry {
   };
 }
 
-export function entryVolume(entry: WorkoutEntry): number {
+export function entryVolume(entry: TrackEntry): number {
   return entry.set_values.reduce((sum, v) => sum + parseNumericValue(v), 0);
 }
 
@@ -123,8 +124,8 @@ export function todayIso(): string {
   return `${y}-${m}-${d}`;
 }
 
-export function loggedAtForWorkoutDate(workoutDate: string): string {
-  const picked = new Date(`${workoutDate}T00:00:00`);
+export function loggedAtForEntryDate(entryDate: string): string {
+  const picked = new Date(`${entryDate}T00:00:00`);
   const today = new Date();
   const sameDay =
     picked.getFullYear() === today.getFullYear() &&
@@ -132,7 +133,7 @@ export function loggedAtForWorkoutDate(workoutDate: string): string {
     picked.getDate() === today.getDate();
   if (sameDay) {
     const t = today.toTimeString().slice(0, 8);
-    return `${workoutDate}T${t}`;
+    return `${entryDate}T${t}`;
   }
-  return `${workoutDate}T12:00:00`;
+  return `${entryDate}T12:00:00`;
 }

@@ -9,7 +9,7 @@ describe("local store", () => {
   it("creates entries offline", () => {
     localCreateEntry({
       exercise: "Pushups",
-      workout_date: "2026-06-11",
+      entry_date: "2026-06-11",
       rows: [
         { label: "Set 1", value: "10 reps" },
         { label: "Set 2", value: "5 reps" },
@@ -25,7 +25,7 @@ describe("local store", () => {
   it("persists to localStorage", () => {
     localCreateEntry({
       exercise: "Running",
-      workout_date: "2026-06-01",
+      entry_date: "2026-06-01",
       rows: [{ label: "Miles", value: "3 miles" }],
     });
     expect(localStorage.getItem("track_anything_p:Default")).toContain("Running");

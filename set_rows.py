@@ -3,14 +3,14 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from data_store import WorkoutStore
-from models import WorkoutEntry, normalize_set_label
+from data_store import TrackStore
+from models import TrackEntry, normalize_set_label
 from set_label_manager import SetLabelManagerDialog
 from theme import FONTS
 
 
 class SetRowsForm:
-    def __init__(self, parent: tk.Widget, store: WorkoutStore, on_labels_changed) -> None:
+    def __init__(self, parent: tk.Widget, store: TrackStore, on_labels_changed) -> None:
         self.parent = parent
         self.store = store
         self.on_labels_changed = on_labels_changed
@@ -75,7 +75,7 @@ class SetRowsForm:
         ttk.Button(row, text="Remove", style="Ghost.TButton", command=remove).pack(side=tk.LEFT)
         self._rows.append((row, label_var, value_var, label_combo))
 
-    def load_entry(self, entry: WorkoutEntry) -> None:
+    def load_entry(self, entry: TrackEntry) -> None:
         self.clear()
         for label, value in zip(entry.set_labels, entry.set_values):
             text = str(int(value)) if value == int(value) else f"{value:g}"

@@ -2,13 +2,13 @@
 
 import type { Bootstrap } from "../types";
 import {
-  WorkoutEntry,
+  TrackEntry,
   entryVolume,
-  loggedAtForWorkoutDate,
+  loggedAtForEntryDate,
   normalizeExerciseName,
   normalizeValueText,
 } from "./models";
-import { LocalWorkoutStore } from "./store";
+import { LocalTrackStore } from "./store";
 
 export interface RowInput {
   label: string;
@@ -17,7 +17,8 @@ export interface RowInput {
 
 export interface EntryInput {
   exercise: string;
-  workout_date: string;
+  entry_date?: string;
+  workout_date?: string; // legacy alias
   rows: RowInput[];
   notes?: string;
   logged_at?: string;
@@ -28,7 +29,7 @@ function formatTotal(volume: number): string {
 }
 
 export function buildBootstrap(
-  store: LocalWorkoutStore,
+  store: LocalTrackStore,
   activeProfile: string,
   dropdownProfiles: string[],
 ): Bootstrap {
@@ -47,7 +48,7 @@ export function buildBootstrap(
     };
     history_rows[index] = {
       entry_index: index,
-      workout_date: entry.workout_date,
+      entry_date: entry.entry_date,
       name: entry.exercise,
       labels: entry.set_labels.map((label) => label.trim() || "—"),
       values: entry.set_values,
@@ -69,7 +70,7 @@ export function buildBootstrap(
   };
 }
 
-export function entryFromInput(data: EntryInput): WorkoutEntry {
+export function entryFromInput(data: EntryInput): TrackEntry {
   const exercise = normalizeExerciseName(data.exercise);
   if (!exercise) throw new Error("Name is required.");
   const set_values: string[] = [];
@@ -83,10 +84,12 @@ export function entryFromInput(data: EntryInput): WorkoutEntry {
     set_values.push(value);
   }
   if (!set_values.length) throw new Error("At least one value is required.");
-  const logged_at = data.logged_at || loggedAtForWorkoutDate(data.workout_date);
+  const entry_date = data.entry_date || data.workout_date;
+  if (!entry_date) throw new Error("Date is required.");
+  const logged_at = data.logged_at || loggedAtForEntryDate(entry_date);
   return {
     exercise,
-    workout_date: data.workout_date,
+    entry_date,
     set_values,
     set_labels,
     notes: (data.notes ?? "").trim(),

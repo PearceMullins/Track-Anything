@@ -4,12 +4,12 @@ import tkinter as tk
 from tkinter import ttk
 
 from charts import create_volume_figure, embed_figure
-from data_store import WorkoutStore
+from data_store import TrackStore
 from theme import COLORS
 
 
 class ChartsPanel(ttk.Frame):
-    def __init__(self, parent, store: WorkoutStore) -> None:
+    def __init__(self, parent, store: TrackStore) -> None:
         super().__init__(parent)
         self.store = store
         self._check_vars: dict[str, tk.BooleanVar] = {}

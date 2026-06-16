@@ -3,13 +3,13 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
-from data_store import WorkoutStore
+from data_store import TrackStore
 from models import normalize_unit
 from theme import COLORS, apply_dark_theme
 
 
 class UnitManagerDialog(tk.Toplevel):
-    def __init__(self, parent: tk.Widget, store: WorkoutStore, on_change) -> None:
+    def __init__(self, parent: tk.Widget, store: TrackStore, on_change) -> None:
         super().__init__(parent)
         self.store = store
         self.on_change = on_change

@@ -5,7 +5,7 @@ from datetime import date
 import pytest
 
 from models import (
-    WorkoutEntry,
+    TrackEntry,
     align_set_labels,
     normalize_exercise_name,
     normalize_value_text,
@@ -20,10 +20,10 @@ def test_parse_numeric_value_extracts_numbers():
     assert parse_numeric_value("no number") == 0.0
 
 
-def test_workout_entry_volume_sums_values():
-    entry = WorkoutEntry(
+def test_track_entry_volume_sums_values():
+    entry = TrackEntry(
         exercise="Pushups",
-        workout_date="2026-06-11",
+        entry_date="2026-06-11",
         set_values=["10 reps", "5 reps"],
         set_labels=["Set A", "Set B"],
     )
@@ -31,11 +31,22 @@ def test_workout_entry_volume_sums_values():
     assert entry.set_count == 2
 
 
-def test_workout_entry_migrates_legacy_numeric_values():
-    entry = WorkoutEntry.from_dict(
+def test_track_entry_migrates_legacy_workout_date():
+    entry = TrackEntry.from_dict(
+        {
+            "exercise": "Pages read",
+            "workout_date": "2026-01-15",
+            "set_values": ["20 pages"],
+        }
+    )
+    assert entry.entry_date == "2026-01-15"
+
+
+def test_track_entry_migrates_legacy_numeric_values():
+    entry = TrackEntry.from_dict(
         {
             "exercise": "Bench",
-            "workout_date": "2026-01-01",
+            "entry_date": "2026-01-01",
             "set_values": [10, 12.5],
             "unit": "reps",
         }
@@ -53,25 +64,25 @@ def test_normalize_strips_extra_whitespace():
     assert normalize_value_text("  10   reps ") == "10 reps"
 
 
-def test_workout_entry_round_trip_dict():
-    original = WorkoutEntry(
+def test_track_entry_round_trip_dict():
+    original = TrackEntry(
         exercise="Running",
-        workout_date=date.today().isoformat(),
+        entry_date=date.today().isoformat(),
         set_values=["3.1 miles"],
         set_labels=["Morning"],
         notes="Felt good",
         logged_at="2026-06-11T08:00:00",
     )
-    restored = WorkoutEntry.from_dict(original.to_dict())
+    restored = TrackEntry.from_dict(original.to_dict())
     assert restored.exercise == original.exercise
     assert restored.set_values == original.set_values
     assert restored.notes == original.notes
 
 
-def test_workout_entry_empty_values_have_zero_volume():
-    entry = WorkoutEntry(
+def test_track_entry_empty_values_have_zero_volume():
+    entry = TrackEntry(
         exercise="Test",
-        workout_date="2026-06-11",
+        entry_date="2026-06-11",
         set_values=[],
     )
     assert entry.volume == 0.0

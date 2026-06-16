@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from models import WorkoutEntry, logged_at_for_workout_date, normalize_exercise_name, normalize_value_text
+from models import TrackEntry, logged_at_for_entry_date, normalize_exercise_name, normalize_value_text
 from profile_manager import ProfileManager
 
 profiles = ProfileManager()
@@ -32,7 +32,8 @@ class RowInput(BaseModel):
 
 class EntryInput(BaseModel):
     exercise: str
-    workout_date: str
+    entry_date: str = ""
+    workout_date: str = ""  # legacy alias
     rows: list[RowInput] = Field(min_length=1)
     notes: str = ""
     logged_at: str = ""
@@ -55,7 +56,7 @@ def _store():
     return profiles.store
 
 
-def _serialize_entry(index: int, entry: WorkoutEntry) -> dict:
+def _serialize_entry(index: int, entry: TrackEntry) -> dict:
     return {
         "index": index,
         **entry.to_dict(),
@@ -77,7 +78,7 @@ def _history_rows() -> list[dict]:
         rows.append(
             {
                 "entry_index": index,
-                "workout_date": entry.workout_date,
+                "entry_date": entry.entry_date,
                 "name": entry.exercise,
                 "labels": labels,
                 "values": list(entry.set_values),
@@ -103,7 +104,7 @@ def _bootstrap() -> dict:
     }
 
 
-def _entry_from_input(data: EntryInput) -> WorkoutEntry:
+def _entry_from_input(data: EntryInput) -> TrackEntry:
     exercise = normalize_exercise_name(data.exercise)
     if not exercise:
         raise HTTPException(400, "Name is required.")
@@ -122,10 +123,13 @@ def _entry_from_input(data: EntryInput) -> WorkoutEntry:
         raise HTTPException(400, "At least one value is required.")
     if any(not label for label in set_labels):
         raise HTTPException(400, "Each row needs a label.")
-    logged_at = data.logged_at or logged_at_for_workout_date(data.workout_date)
-    return WorkoutEntry(
+    entry_date = data.entry_date or data.workout_date
+    if not entry_date:
+        raise HTTPException(400, "Date is required.")
+    logged_at = data.logged_at or logged_at_for_entry_date(entry_date)
+    return TrackEntry(
         exercise=exercise,
-        workout_date=data.workout_date,
+        entry_date=entry_date,
         set_values=set_values,
         set_labels=set_labels,
         notes=data.notes.strip(),

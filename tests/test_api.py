@@ -2,7 +2,7 @@
 
 ENTRY_BODY = {
     "exercise": "Pushups",
-    "workout_date": "2026-06-11",
+    "entry_date": "2026-06-11",
     "rows": [
         {"label": "Set 1", "value": "10 reps"},
         {"label": "Set 2", "value": "5 reps"},
@@ -38,7 +38,7 @@ def test_create_entry_requires_label(client):
         "/api/entries",
         json={
             "exercise": "Test",
-            "workout_date": "2026-06-11",
+            "entry_date": "2026-06-11",
             "rows": [{"label": "", "value": "10"}],
         },
     )

@@ -6,18 +6,18 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api
-from data_store import WorkoutStore
+from data_store import TrackStore
 from profile_manager import ProfileManager
 
 
 @pytest.fixture
 def data_path(tmp_path: Path) -> Path:
-    return tmp_path / "workout_data.json"
+    return tmp_path / "track_anything_data.json"
 
 
 @pytest.fixture
-def store(data_path: Path) -> WorkoutStore:
-    return WorkoutStore(data_path)
+def store(data_path: Path) -> TrackStore:
+    return TrackStore(data_path)
 
 
 @pytest.fixture

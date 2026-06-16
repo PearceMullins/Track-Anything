@@ -4,10 +4,10 @@ import tkinter as tk
 from tkinter import ttk
 
 from charts_panel import ChartsPanel
-from data_store import WorkoutStore
+from data_store import TrackStore
 from entry_panel import EntryPanel
 from history_panel import HistoryPanel
-from models import WorkoutEntry
+from models import TrackEntry
 from theme import apply_dark_theme, make_scrollable
 
 
@@ -18,7 +18,7 @@ class TrackAnythingApp(tk.Tk):
         self.geometry("820x680")
         self.minsize(680, 520)
 
-        self.store = WorkoutStore()
+        self.store = TrackStore()
         self._apply_theme()
         self._build_ui()
 
@@ -81,7 +81,7 @@ class TrackAnythingApp(tk.Tk):
             style="Muted.TLabel",
         ).pack()
 
-    def _on_entry_saved(self, entry: WorkoutEntry) -> None:
+    def _on_entry_saved(self, entry: TrackEntry) -> None:
         self.store.add(entry)
         self.history_panel.refresh()
         self._on_data_changed()

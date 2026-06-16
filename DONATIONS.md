@@ -1,45 +1,39 @@
-# In-app tips (Google Play Billing)
+# Optional Tips
 
-Track Anything includes optional **tips** via Google Play. Tips are consumable in-app products — they do not unlock features.
+Track Anything includes optional one-time tips through Google Play Billing.
+Tips are consumable in-app products. They do not unlock features, content, or
+access.
 
-## Product IDs (must match Play Console exactly)
+## Product IDs
 
-| Product ID   | Suggested price | Type        |
-|--------------|-----------------|-------------|
-| `tip_small`  | $0.99           | Consumable  |
-| `tip_medium` | $2.99           | Consumable  |
-| `tip_large`  | $4.99           | Consumable  |
+Create these in Play Console under **Monetize with Play > Products > In-app
+products**.
 
-In Play Console: **Monetize → Products → In-app products → Create product**
+| Product ID | Suggested price | Type |
+| --- | --- | --- |
+| `tip_small` | $0.99 | Consumable |
+| `tip_medium` | $2.99 | Consumable |
+| `tip_large` | $4.99 | Consumable |
 
-- Product ID: use the IDs above (lowercase, underscores)
-- Name / description: shown in the tip dialog (e.g. "Small tip", "Thanks for your support")
-- Status: **Active**
+Product IDs must match `frontend/src/donations/config.ts`.
 
-## Can we build before Play Console?
+## Testing Order
 
-| Step | Before Play Console? |
-|------|----------------------|
-| Tip button + UI in the app | Yes — done |
-| Google Play Billing code | Yes — done |
-| Real purchases working | **No** — needs app created + products + internal test upload |
-| Testing with license testers | **No** — needs Play Console |
+1. Create the Play Console app with package `com.trackanything.app`.
+2. Create and activate the three in-app products.
+3. Upload a signed Android App Bundle to Internal testing.
+4. Add license testers in Play Console.
+5. Install from the internal test link.
+6. Open **Donations** in the app and complete a test tip.
 
-**Recommended order:**
+License tester purchases should not create real charges.
 
-1. Create app in Play Console (`com.trackanything.app`)
-2. Create the three in-app products above
-3. Upload signed AAB to **Internal testing**
-4. Add your Gmail under **Setup → License testing**
-5. Install from the Play internal test link (not Android Studio sideload)
-6. Open app → **Support the developer** → complete a test tip (no real charge for license testers)
+## Desktop And Web Behavior
 
-## App UI
+Tips are only available in the Google Play Android build. Desktop and web builds
+show a message explaining that Google Play Billing is unavailable there.
 
-Footer link: **Donations** (tab bar, next to Progress Charts)
+## Pricing
 
-On desktop/web builds, the dialog explains tips are only available in the Play Store Android app.
-
-## Updating prices
-
-Change prices in Play Console only. The app loads titles and prices from Google Play automatically.
+Change prices in Play Console. The app loads product titles and prices from
+Google Play.

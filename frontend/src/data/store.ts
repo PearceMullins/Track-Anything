@@ -4,7 +4,7 @@ import {
   NAME_SUGGESTIONS,
   LABEL_SUGGESTIONS,
   VALUE_SUGGESTIONS,
-  WorkoutEntry,
+  TrackEntry,
   entryFromDict,
   normalizeExerciseName,
   normalizeSetLabel,
@@ -18,7 +18,7 @@ import {
 const STORAGE_KEY = "track_anything_data";
 
 export interface PersistedPayload {
-  entries: WorkoutEntry[];
+  entries: TrackEntry[];
   hidden_names: string[];
   custom_names: string[];
   hidden_units: string[];
@@ -43,13 +43,13 @@ export function emptyPayload(): PersistedPayload {
   };
 }
 
-function chartDatetime(workoutDate: string, sameDayIndex: number): Date {
-  const base = new Date(`${workoutDate}T12:00:00`);
+function chartDatetime(entryDate: string, sameDayIndex: number): Date {
+  const base = new Date(`${entryDate}T12:00:00`);
   base.setMinutes(base.getMinutes() + sameDayIndex * 30);
   return base;
 }
 
-export class LocalWorkoutStore {
+export class LocalTrackStore {
   private payload: PersistedPayload = emptyPayload();
   private autosave: boolean;
   private persistHandler: ((payload: PersistedPayload) => void) | null = null;
@@ -136,11 +136,11 @@ export class LocalWorkoutStore {
     this.listCache = {};
   }
 
-  get entries(): WorkoutEntry[] {
+  get entries(): TrackEntry[] {
     return [...this.payload.entries];
   }
 
-  add(entry: WorkoutEntry): void {
+  add(entry: TrackEntry): void {
     this.payload.entries.push(entry);
     this.rememberEntryLists(entry);
     this.save();
@@ -153,7 +153,7 @@ export class LocalWorkoutStore {
     }
   }
 
-  update(index: number, entry: WorkoutEntry): void {
+  update(index: number, entry: TrackEntry): void {
     if (index < 0 || index >= this.payload.entries.length) return;
     if (!entry.logged_at) {
       entry.logged_at = this.payload.entries[index].logged_at;
@@ -329,20 +329,20 @@ export class LocalWorkoutStore {
     const entries = this.payload.entries
       .filter((e) => e.exercise === exercise)
       .sort((a, b) => {
-        const d = a.workout_date.localeCompare(b.workout_date);
+        const d = a.entry_date.localeCompare(b.entry_date);
         return d !== 0 ? d : (a.logged_at || "").localeCompare(b.logged_at || "");
       });
     const sameDay: Record<string, number> = {};
     return entries.map((entry) => {
-      const idx = sameDay[entry.workout_date] ?? 0;
-      sameDay[entry.workout_date] = idx + 1;
-      const when = chartDatetime(entry.workout_date, idx);
+      const idx = sameDay[entry.entry_date] ?? 0;
+      sameDay[entry.entry_date] = idx + 1;
+      const when = chartDatetime(entry.entry_date, idx);
       const total = entry.set_values.reduce((s, v) => s + parseNumericValue(v), 0);
       return { date: when.toISOString(), total };
     });
   }
 
-  private rememberEntryLists(entry: WorkoutEntry): void {
+  private rememberEntryLists(entry: TrackEntry): void {
     this.payload.hidden_names = this.payload.hidden_names.filter(
       (n) => n !== normalizeExerciseName(entry.exercise),
     );
@@ -387,10 +387,10 @@ export class LocalWorkoutStore {
     const counts: Record<string, number> = {};
     for (const entry of this.payload.entries) {
       if (entry.logged_at) continue;
-      const key = `${entry.exercise}|${entry.workout_date}`;
+      const key = `${entry.exercise}|${entry.entry_date}`;
       const idx = counts[key] ?? 0;
       counts[key] = idx + 1;
-      const base = new Date(`${entry.workout_date}T08:00:00`);
+      const base = new Date(`${entry.entry_date}T08:00:00`);
       base.setHours(base.getHours() + idx * 2);
       entry.logged_at = base.toISOString().slice(0, 19);
       changed = true;

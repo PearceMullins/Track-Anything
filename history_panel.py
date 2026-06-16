@@ -3,13 +3,13 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from data_store import WorkoutStore
+from data_store import TrackStore
 from history_edit_dialog import HistoryEditDialog
 from models import normalize_unit
 
 
 class HistoryPanel(ttk.Frame):
-    def __init__(self, parent, store: WorkoutStore, on_change) -> None:
+    def __init__(self, parent, store: TrackStore, on_change) -> None:
         super().__init__(parent)
         self.store = store
         self.on_change = on_change
@@ -75,7 +75,7 @@ class HistoryPanel(ttk.Frame):
                 tk.END,
                 iid=str(i),
                 values=(
-                    entry.workout_date,
+                    entry.entry_date,
                     entry.exercise,
                     normalize_unit(entry.unit) or "—",
                     entry.set_count,
@@ -98,7 +98,7 @@ class HistoryPanel(ttk.Frame):
 
         index = int(selected[0])
         entry = self.store.entries[index]
-        summary = f"{entry.workout_date} — {entry.exercise} ({entry.formatted_volume})"
+        summary = f"{entry.entry_date} — {entry.exercise} ({entry.formatted_volume})"
         if not messagebox.askyesno("Confirm Edit", f"Edit this entry?\n\n{summary}"):
             return
 

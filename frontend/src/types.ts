@@ -6,7 +6,7 @@ export interface RowInput {
 export interface EntryRecord {
   index: number;
   exercise: string;
-  workout_date: string;
+  entry_date: string;
   set_values: string[];
   set_labels: string[];
   notes: string;
@@ -17,7 +17,7 @@ export interface EntryRecord {
 
 export interface HistoryRow {
   entry_index: number;
-  workout_date: string;
+  entry_date: string;
   name: string;
   labels: string[];
   values: string[];

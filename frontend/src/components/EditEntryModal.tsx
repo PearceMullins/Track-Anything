@@ -21,7 +21,7 @@ interface EditEntryModalProps {
 
 export function EditEntryModal({ entry, data, onClose, onSaved }: EditEntryModalProps) {
   const [name, setName] = useState(entry.exercise);
-  const [date, setDate] = useState(isoToDisplay(entry.workout_date));
+  const [date, setDate] = useState(isoToDisplay(entry.entry_date));
   const [notes, setNotes] = useState(entry.notes);
   const [rows, setRows] = useState<RowState[]>(
     entry.set_values.map((v, i) => ({
@@ -45,7 +45,7 @@ export function EditEntryModal({ entry, data, onClose, onSaved }: EditEntryModal
         .filter((r) => r.value);
       const result = await api.updateEntry(entry.index, {
         exercise: name,
-        workout_date: displayToIso(date),
+        entry_date: displayToIso(date),
         notes,
         logged_at: entry.logged_at,
         rows: parsed,

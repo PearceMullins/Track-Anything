@@ -83,7 +83,7 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
         .filter((r) => r.value);
       const result = await api.createEntry({
         exercise: name,
-        workout_date: displayToIso(date),
+        entry_date: displayToIso(date),
         notes,
         rows: parsed,
       });

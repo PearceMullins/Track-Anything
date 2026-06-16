@@ -28,7 +28,7 @@ const HistoryTableRow = memo(function HistoryTableRow({
       onClick={() => onSelect(row.entry_index)}
       onDoubleClick={() => onEdit(row.entry_index)}
     >
-      <td className="history-anchor">{isoToDisplay(row.workout_date)}</td>
+      <td className="history-anchor">{isoToDisplay(row.entry_date)}</td>
       <td className="history-anchor">{row.name}</td>
       <td className="history-stack">
         {row.labels.map((label, i) => (
@@ -125,7 +125,7 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
     }
     const entry = data.entries.find((e) => e.index === selected);
     if (!entry) return;
-    if (!window.confirm(`Edit this entry?\n\n${isoToDisplay(entry.workout_date)} — ${entry.exercise}`)) return;
+    if (!window.confirm(`Edit this entry?\n\n${isoToDisplay(entry.entry_date)} — ${entry.exercise}`)) return;
     setEditing(entry);
   };
 

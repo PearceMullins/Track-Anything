@@ -4,9 +4,9 @@ import tkinter as tk
 from datetime import date
 from tkinter import messagebox, ttk
 
-from data_store import WorkoutStore
+from data_store import TrackStore
 from date_picker import DatePicker
-from models import WorkoutEntry, normalize_exercise_name, normalize_unit
+from models import TrackEntry, normalize_exercise_name, normalize_unit
 from set_rows import SetRowsForm
 from theme import FONTS, apply_dark_theme, style_text_widget
 from unit_manager import UnitManagerDialog
@@ -16,9 +16,9 @@ class HistoryEditDialog(tk.Toplevel):
     def __init__(
         self,
         parent: tk.Widget,
-        store: WorkoutStore,
+        store: TrackStore,
         entry_index: int,
-        entry: WorkoutEntry,
+        entry: TrackEntry,
         on_saved,
     ) -> None:
         super().__init__(parent)
@@ -104,9 +104,9 @@ class HistoryEditDialog(tk.Toplevel):
         ttk.Button(btn_row, text="Cancel", style="Ghost.TButton", command=self.destroy).pack(side=tk.RIGHT, padx=(8, 0))
         ttk.Button(btn_row, text="Save Changes", style="Accent.TButton", command=self._save).pack(side=tk.RIGHT)
 
-    def _load_fields(self, entry: WorkoutEntry) -> None:
+    def _load_fields(self, entry: TrackEntry) -> None:
         self.exercise_var.set(entry.exercise)
-        self.date_var.set(entry.workout_date)
+        self.date_var.set(entry.entry_date)
         self.unit_var.set(normalize_unit(entry.unit))
         if entry.notes:
             self.notes_text.insert("1.0", entry.notes)
@@ -133,9 +133,9 @@ class HistoryEditDialog(tk.Toplevel):
             messagebox.showwarning("Missing name", "Type a name to track.", parent=self)
             return
 
-        workout_date = self.date_var.get().strip()
+        entry_date = self.date_var.get().strip()
         try:
-            date.fromisoformat(workout_date)
+            date.fromisoformat(entry_date)
         except ValueError:
             messagebox.showwarning("Invalid date", "Use YYYY-MM-DD format.", parent=self)
             return
@@ -156,9 +156,9 @@ class HistoryEditDialog(tk.Toplevel):
             return
 
         notes = self.notes_text.get("1.0", tk.END).strip()
-        updated = WorkoutEntry(
+        updated = TrackEntry(
             exercise=exercise,
-            workout_date=workout_date,
+            entry_date=entry_date,
             set_values=set_values,
             set_labels=set_labels,
             notes=notes,

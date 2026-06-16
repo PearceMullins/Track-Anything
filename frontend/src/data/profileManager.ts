@@ -1,7 +1,7 @@
 /** Multi-profile storage for offline / Android builds. */
 
 import { DEFAULT_PROFILE, normalizeProfileName } from "./profileNames";
-import { LocalWorkoutStore, type PersistedPayload, emptyPayload } from "./store";
+import { LocalTrackStore, type PersistedPayload, emptyPayload } from "./store";
 
 const ROOT_KEY = "track_anything_profiles";
 const LEGACY_KEY = "track_anything_data";
@@ -32,7 +32,7 @@ export class ProfileManager {
   private hiddenProfiles = new Set<string>();
   private customProfiles = new Set<string>();
   private payloadCache: Record<string, PersistedPayload> = {};
-  private store = new LocalWorkoutStore({ autosave: false });
+  private store = new LocalTrackStore({ autosave: false });
 
   constructor() {
     this.store.setPersistHandler((payload) => this.persistActive(payload));
@@ -43,7 +43,7 @@ export class ProfileManager {
     return this.active;
   }
 
-  get workoutStore(): LocalWorkoutStore {
+  get trackStore(): LocalTrackStore {
     return this.store;
   }
 
@@ -245,8 +245,8 @@ export function getProfileManager(): ProfileManager {
   return singleton;
 }
 
-export function getLocalStore(): LocalWorkoutStore {
-  return getProfileManager().workoutStore;
+export function getLocalStore(): LocalTrackStore {
+  return getProfileManager().trackStore;
 }
 
 export function resetProfileManagerForTests(): void {

@@ -1,12 +1,25 @@
 """Build standalone Windows executable with PyInstaller."""
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DIST_FRONTEND = ROOT / "frontend" / "dist"
+ICON_CANDIDATES = (
+    ROOT / "assets" / "Track Anything Icon.ico",
+    ROOT / "assets" / "app.ico",
+)
+EXE_NAME = "TrackAnything"
+
+
+def resolve_icon() -> Path | None:
+    for candidate in ICON_CANDIDATES:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def build(*, onefile: bool = True) -> None:
@@ -20,15 +33,18 @@ def build(*, onefile: bool = True) -> None:
         "-m",
         "PyInstaller",
         "--noconfirm",
+        "--clean",
         "--windowed",
         "--name",
-        "TrackAnything",
+        EXE_NAME,
         "--distpath",
         str(ROOT / "dist"),
         "--workpath",
         str(ROOT / "build"),
         "--specpath",
         str(ROOT),
+        "--add-data",
+        f"{DIST_FRONTEND}{os.pathsep}frontend/dist",
         "--hidden-import",
         "uvicorn.logging",
         "--hidden-import",
@@ -44,17 +60,17 @@ def build(*, onefile: bool = True) -> None:
     else:
         cmd.insert(5, "--onedir")
 
-    icon = ROOT / "assets" / "app.ico"
-    if icon.exists():
+    icon = resolve_icon()
+    if icon is not None:
         cmd.extend(["--icon", str(icon)])
 
     print("Running:", " ".join(cmd))
     subprocess.check_call(cmd, cwd=ROOT)
 
     if onefile:
-        print(f"\nDesktop app ready: {ROOT / 'dist' / 'TrackAnything.exe'}")
+        print(f"\nDesktop app ready: {ROOT / 'dist' / f'{EXE_NAME}.exe'}")
     else:
-        print(f"\nDesktop app folder ready: {ROOT / 'dist' / 'TrackAnything'}")
+        print(f"\nDesktop app folder ready: {ROOT / 'dist' / EXE_NAME}")
 
 
 def main() -> None:

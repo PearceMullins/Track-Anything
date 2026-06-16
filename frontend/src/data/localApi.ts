@@ -6,7 +6,7 @@ import { getProfileManager } from "./profileManager";
 
 function bootstrap(): Bootstrap {
   const pm = getProfileManager();
-  return buildBootstrap(pm.workoutStore, pm.activeProfile, pm.dropdownProfiles());
+  return buildBootstrap(pm.trackStore, pm.activeProfile, pm.dropdownProfiles());
 }
 
 export function localFetchBootstrap(): Bootstrap {
@@ -14,12 +14,12 @@ export function localFetchBootstrap(): Bootstrap {
 }
 
 export function localCreateEntry(body: EntryInput): Bootstrap {
-  getProfileManager().workoutStore.add(entryFromInput(body));
+  getProfileManager().trackStore.add(entryFromInput(body));
   return bootstrap();
 }
 
 export function localUpdateEntry(index: number, body: EntryInput): Bootstrap {
-  const store = getProfileManager().workoutStore;
+  const store = getProfileManager().trackStore;
   if (index < 0 || index >= store.entries.length) {
     throw new Error("Entry not found.");
   }
@@ -30,7 +30,7 @@ export function localUpdateEntry(index: number, body: EntryInput): Bootstrap {
 }
 
 export function localDeleteEntry(index: number): Bootstrap {
-  const store = getProfileManager().workoutStore;
+  const store = getProfileManager().trackStore;
   if (index < 0 || index >= store.entries.length) {
     throw new Error("Entry not found.");
   }
@@ -39,16 +39,16 @@ export function localDeleteEntry(index: number): Bootstrap {
 }
 
 export function localFetchChart(name: string): { name: string; points: ChartPoint[] } {
-  return { name, points: getProfileManager().workoutStore.historyPoints(name) };
+  return { name, points: getProfileManager().trackStore.historyPoints(name) };
 }
 
 export function localRenameName(oldValue: string, newValue: string): Bootstrap {
-  getProfileManager().workoutStore.renameName(oldValue, newValue);
+  getProfileManager().trackStore.renameName(oldValue, newValue);
   return bootstrap();
 }
 
 export function localRemoveName(name: string): Bootstrap {
-  getProfileManager().workoutStore.removeName(name);
+  getProfileManager().trackStore.removeName(name);
   return bootstrap();
 }
 
@@ -73,21 +73,21 @@ export function localRemoveProfile(name: string): Bootstrap {
 }
 
 export function localRenameLabel(oldValue: string, newValue: string): Bootstrap {
-  getProfileManager().workoutStore.renameSetLabel(oldValue, newValue);
+  getProfileManager().trackStore.renameSetLabel(oldValue, newValue);
   return bootstrap();
 }
 
 export function localRemoveLabel(name: string): Bootstrap {
-  getProfileManager().workoutStore.removeSetLabel(name);
+  getProfileManager().trackStore.removeSetLabel(name);
   return bootstrap();
 }
 
 export function localRenameValue(oldValue: string, newValue: string): Bootstrap {
-  getProfileManager().workoutStore.renameValue(oldValue, newValue);
+  getProfileManager().trackStore.renameValue(oldValue, newValue);
   return bootstrap();
 }
 
 export function localRemoveValue(name: string): Bootstrap {
-  getProfileManager().workoutStore.removeValue(name);
+  getProfileManager().trackStore.removeValue(name);
   return bootstrap();
 }

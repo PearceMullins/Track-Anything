@@ -1,4 +1,5 @@
-import type { ChartPoint, EntryRecord } from "./types";
+import type { ChartPointDetail, EntryRecord } from "./types";
+import { parseNumericValue } from "./data/models";
 
 function chartDatetime(entryDate: string, sameDayIndex: number): Date {
   const base = new Date(`${entryDate}T12:00:00`);
@@ -6,8 +7,24 @@ function chartDatetime(entryDate: string, sameDayIndex: number): Date {
   return base;
 }
 
-/** Chart points for one tracked name, matching backend history_points logic. */
-export function chartPointsForExercise(entries: EntryRecord[], exercise: string): ChartPoint[] {
+function chartPointFromEntry(
+  entry: EntryRecord,
+  sameDayIndex: number,
+): ChartPointDetail {
+  return {
+    date: chartDatetime(entry.entry_date, sameDayIndex).toISOString(),
+    value: parseNumericValue(entry.value),
+    valueDisplay: entry.value,
+    entryIndex: entry.index,
+    notes: entry.notes,
+  };
+}
+
+/** Chart points for one tracked name. Y-axis uses the parsed numeric value. */
+export function chartPointsForExercise(
+  entries: EntryRecord[],
+  exercise: string,
+): ChartPointDetail[] {
   const matching = entries
     .filter((entry) => entry.exercise === exercise)
     .sort((a, b) => {
@@ -19,10 +36,7 @@ export function chartPointsForExercise(entries: EntryRecord[], exercise: string)
   return matching.map((entry) => {
     const idx = sameDay[entry.entry_date] ?? 0;
     sameDay[entry.entry_date] = idx + 1;
-    return {
-      date: chartDatetime(entry.entry_date, idx).toISOString(),
-      total: entry.volume,
-    };
+    return chartPointFromEntry(entry, idx);
   });
 }
 
@@ -32,7 +46,7 @@ export function chartDataKey(entries: EntryRecord[], exercise: string): string {
     .filter((entry) => entry.exercise === exercise)
     .map(
       (entry) =>
-        `${entry.index}:${entry.entry_date}:${entry.logged_at}:${entry.volume}:${entry.set_values.join("|")}`,
+        `${entry.index}:${entry.entry_date}:${entry.logged_at}:${entry.value}:${entry.notes}`,
     )
     .join(";");
 }

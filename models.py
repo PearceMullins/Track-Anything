@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from datetime import date, datetime, time
 from typing import Any
 
 NAME_SUGGESTIONS = ("Calories", "Body Weight", "Pushups", "Pullups", "Running")
 
-LABEL_SUGGESTIONS = ("first set", "second set", "third set", "Morning", "Evening", "Warm-up")
-
 VALUE_SUGGESTIONS = ("10 reps", "5 reps", "20 reps", "3 miles", "30 minutes", "200 lbs", "150 lbs")
+
+NOTE_SUGGESTIONS = ("Morning", "Evening", "Felt good", "PR day")
 
 DEFAULT_PROFILE = "Default"
 
@@ -22,50 +22,64 @@ class TrackEntry:
 
     exercise: str
     entry_date: str  # ISO format YYYY-MM-DD
-    set_values: list[str]
-    set_labels: list[str] = field(default_factory=list)
+    value: str
     notes: str = ""
     logged_at: str = ""
-    unit: str = ""  # legacy; no longer used in the UI
 
     def __post_init__(self) -> None:
-        self.set_values = [canonical_value_text(v) for v in self.set_values]
-        aligned = align_set_labels(self.set_labels, len(self.set_values))
-        self.set_labels = [canonical_set_label(label) for label in aligned]
+        self.value = canonical_value_text(self.value)
 
     @property
-    def volume(self) -> float:
-        return sum(parse_numeric_value(v) for v in self.set_values)
-
-    @property
-    def set_count(self) -> int:
-        return len(self.set_values)
+    def numeric_value(self) -> float:
+        return parse_numeric_value(self.value)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TrackEntry":
-        unit = normalize_unit(data.get("unit", ""))
-        set_values = [_coerce_value_text(v, unit) for v in data["set_values"]]
-        raw_labels = data.get("set_labels")
-        set_labels = (
-            align_set_labels([str(label) for label in raw_labels], len(set_values))
-            if raw_labels is not None
-            else align_set_labels([], len(set_values))
-        )
         entry_date = data.get("entry_date") or data.get("workout_date")
         if not entry_date:
             raise KeyError("entry_date")
+        if data.get("value"):
+            return cls(
+                exercise=data["exercise"],
+                entry_date=entry_date,
+                value=str(data["value"]),
+                notes=data.get("notes", ""),
+                logged_at=data.get("logged_at", ""),
+            )
+        if data.get("set_values"):
+            return _migrate_legacy_entry(data, entry_date)
         return cls(
             exercise=data["exercise"],
             entry_date=entry_date,
-            set_values=set_values,
-            set_labels=set_labels,
+            value="",
             notes=data.get("notes", ""),
             logged_at=data.get("logged_at", ""),
-            unit=unit,
         )
+
+
+def _migrate_legacy_entry(data: dict[str, Any], entry_date: str) -> "TrackEntry":
+    unit = normalize_unit(data.get("unit", ""))
+    set_values = [_coerce_value_text(v, unit) for v in data["set_values"]]
+    set_labels = [str(label) for label in data.get("set_labels") or []]
+    value = canonical_value_text(set_values[0]) if set_values else ""
+    notes = str(data.get("notes", ""))
+    if len(set_values) > 1:
+        extra_parts = []
+        for i, row_value in enumerate(set_values[1:], start=2):
+            label = set_labels[i - 1].strip() if i - 1 < len(set_labels) and set_labels[i - 1].strip() else f"Row {i}"
+            extra_parts.append(f"{label}: {row_value}")
+        extra = "; ".join(extra_parts)
+        notes = f"{notes}\n{extra}".strip() if notes else extra
+    return TrackEntry(
+        exercise=data["exercise"],
+        entry_date=entry_date,
+        value=value,
+        notes=notes,
+        logged_at=data.get("logged_at", ""),
+    )
 
 
 def normalize_unit(unit: str) -> str:
@@ -80,19 +94,18 @@ def normalize_profile_name(name: str) -> str:
     return " ".join(name.strip().split())
 
 
-def normalize_set_label(label: str) -> str:
-    return " ".join(label.strip().split())
-
-
 def normalize_value_text(value: str) -> str:
     return " ".join(value.strip().split())
 
 
-def canonical_set_label(label: str) -> str:
-    """Match preset suggestions by case-insensitive text (e.g. First set → first set)."""
-    normalized = normalize_set_label(label)
+def normalize_note_text(note: str) -> str:
+    return note.strip()
+
+
+def canonical_note_text(note: str) -> str:
+    normalized = normalize_note_text(note)
     lower = normalized.casefold()
-    for suggestion in LABEL_SUGGESTIONS:
+    for suggestion in NOTE_SUGGESTIONS:
         if suggestion.casefold() == lower:
             return suggestion
     return normalized
@@ -125,13 +138,6 @@ def _coerce_value_text(raw: Any, unit: str) -> str:
     if unit:
         return f"{text} {unit}"
     return text
-
-
-def align_set_labels(labels: list[str], count: int) -> list[str]:
-    normalized = [normalize_set_label(label) for label in labels]
-    while len(normalized) < count:
-        normalized.append("")
-    return normalized[:count]
 
 
 def today_iso() -> str:

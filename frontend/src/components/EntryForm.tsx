@@ -5,63 +5,58 @@ import { ComboInput } from "./ComboInput";
 import { DateInput } from "./DateInput";
 import { SuggestionInput } from "./SuggestionInput";
 import { displayToIso, resolveEntryDraftDate, todayDisplay, todayIso } from "../dateFormat";
-import { labelPlaceholder } from "../labelPlaceholder";
-import { clearEntryDraft, loadUiSlice, saveUiSlice, type EntryDraftRow } from "../uiState";
+import { clearEntryDraft, loadUiSlice, saveUiSlice, type EntryDraft } from "../uiState";
 
 interface EntryFormProps {
   data: Bootstrap;
   onSaved: (data: Bootstrap) => void;
-  onManage: (kind: "names" | "labels" | "values") => void;
+  onManage: (kind: "names" | "values" | "notes") => void;
 }
 
-function emptyRow(): EntryDraftRow {
-  return { label: "", value: "" };
-}
-
-function initialDraft(profile: string) {
+function initialDraft(profile: string): EntryDraft {
   const saved = loadUiSlice(profile);
   const draft = saved.entryDraft;
   return {
     name: draft?.name ?? "",
     date: resolveEntryDraftDate(draft?.date, saved.entryDraftDay),
+    value: draft?.value ?? "",
     notes: draft?.notes ?? "",
-    rows: draft?.rows?.length ? draft.rows : [emptyRow()],
   };
 }
 
-function freshDraft() {
+function freshDraft(): EntryDraft {
   return {
     name: "",
     date: todayDisplay(),
+    value: "",
     notes: "",
-    rows: [emptyRow()],
   };
 }
 
 export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
   const profile = data.active_profile;
   const dropdownNames = useMemo(() => data.dropdown_names, [data.dropdown_names]);
-  const dropdownLabels = useMemo(() => data.dropdown_set_labels, [data.dropdown_set_labels]);
   const dropdownValues = useMemo(() => data.dropdown_values, [data.dropdown_values]);
+  const dropdownNotes = useMemo(() => data.dropdown_notes, [data.dropdown_notes]);
   const [initial] = useState(() => initialDraft(profile));
   const [name, setName] = useState(initial.name);
   const [date, setDate] = useState(initial.date);
+  const [value, setValue] = useState(initial.value);
   const [notes, setNotes] = useState(initial.notes);
-  const [rows, setRows] = useState<EntryDraftRow[]>(initial.rows);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const draftRef = useRef({ name, date, notes, rows });
+  const draftRef = useRef({ name, date, value, notes });
 
   useEffect(() => {
-    draftRef.current = { name, date, notes, rows };
-  }, [name, date, notes, rows]);
+    draftRef.current = { name, date, value, notes };
+  }, [name, date, value, notes]);
 
   useEffect(() => {
     saveUiSlice(profile, {
       entryDraftDay: todayIso(),
-      entryDraft: { name, date, notes, rows },
+      entryDraft: { name, date, value, notes },
     });
-  }, [profile, name, date, notes, rows]);
+  }, [profile, name, date, value, notes]);
 
   useEffect(() => {
     const syncDateForNewDay = () => {
@@ -92,38 +87,32 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
     };
   }, [profile]);
 
-  const updateRow = (index: number, patch: Partial<EntryDraftRow>) => {
-    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
-  };
-
-  const addRow = () => setRows((prev) => [...prev, emptyRow()]);
-
-  const removeRow = (index: number) => {
-    if (rows.length <= 1) return;
-    setRows((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const reset = () => {
     const draft = freshDraft();
     setName(draft.name);
     setNotes(draft.notes);
     setDate(draft.date);
-    setRows(draft.rows);
+    setValue(draft.value);
     clearEntryDraft(profile, draft);
   };
 
   const save = async () => {
     setError("");
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    if (!value.trim()) {
+      setError("Value is required.");
+      return;
+    }
     setSaving(true);
     try {
-      const parsed = rows
-        .map((r) => ({ label: r.label.trim(), value: r.value.trim() }))
-        .filter((r) => r.value);
       const result = await api.createEntry({
         exercise: name,
         entry_date: displayToIso(date),
+        value: value.trim(),
         notes,
-        rows: parsed,
       });
       onSaved(result);
       reset();
@@ -138,7 +127,7 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
     <section className="card">
       <h2 className="card-title">Log Entry</h2>
       {error && <div className="error-banner">{error}</div>}
-      <p className="hint">Type any name, label, or value — suggestions appear from your history.</p>
+      <p className="hint">Type any name, value, or note — suggestions appear from your history.</p>
 
       <div className="form-grid">
         <div className="field">
@@ -158,49 +147,43 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
         <DateInput id="entry-date" value={date} onChange={setDate} />
       </div>
 
-      <div className="rows-header">
-        <span>Label</span>
-        <span>Value</span>
-        <span />
-      </div>
-      {rows.map((row, i) => (
-        <div className="row-line" key={i}>
-          <SuggestionInput
-            value={row.label}
-            options={dropdownLabels}
-            onChange={(label) => updateRow(i, { label })}
-            placeholder={labelPlaceholder(i)}
-          />
-          <SuggestionInput
-            value={row.value}
-            options={dropdownValues}
-            onChange={(value) => updateRow(i, { value })}
-            placeholder="10 reps"
-          />
-          <button type="button" className="btn btn-ghost btn-danger" onClick={() => removeRow(i)}>
-            Remove
+      <div className="field" style={{ marginTop: 12 }}>
+        <label htmlFor="entry-value">Value</label>
+        <SuggestionInput
+          id="entry-value"
+          value={value}
+          options={dropdownValues}
+          onChange={setValue}
+          placeholder="10 reps"
+        />
+        <div className="btn-row" style={{ marginTop: 8 }}>
+          <button type="button" className="btn btn-ghost" onClick={() => onManage("values")}>
+            Manage values
           </button>
         </div>
-      ))}
-
-      <div className="btn-row" style={{ marginTop: 12 }}>
-        <button type="button" className="btn" onClick={addRow}>
-          + Add row
-        </button>
-        <button type="button" className="btn btn-ghost" onClick={() => onManage("labels")}>
-          Manage labels
-        </button>
-        <button type="button" className="btn btn-ghost" onClick={() => onManage("values")}>
-          Manage values
-        </button>
-        <button type="button" className="btn btn-accent" onClick={save} disabled={saving}>
-          {saving ? "Saving…" : "Save entry"}
-        </button>
       </div>
 
       <div className="field" style={{ marginTop: 16 }}>
-        <label htmlFor="notes">Notes</label>
-        <textarea id="notes" className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <label htmlFor="notes">Notes (optional)</label>
+        <SuggestionInput
+          id="notes"
+          value={notes}
+          options={dropdownNotes}
+          onChange={setNotes}
+          placeholder="Morning session"
+          multiline
+        />
+        <div className="btn-row" style={{ marginTop: 8 }}>
+          <button type="button" className="btn btn-ghost" onClick={() => onManage("notes")}>
+            Manage notes
+          </button>
+        </div>
+      </div>
+
+      <div className="btn-row" style={{ marginTop: 16 }}>
+        <button type="button" className="btn btn-accent" onClick={save} disabled={saving}>
+          {saving ? "Saving…" : "Save entry"}
+        </button>
       </div>
     </section>
   );

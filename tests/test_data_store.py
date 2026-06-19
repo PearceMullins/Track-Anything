@@ -4,15 +4,12 @@ from models import TrackEntry
 from data_store import TrackStore
 
 
-def _sample_entry(name: str = "Pushups", values: list[str] | None = None) -> TrackEntry:
-    values = values or ["10 reps", "5 reps"]
-    labels = [f"Set {i + 1}" for i in range(len(values))]
+def _sample_entry(name: str = "Pushups", value: str = "10 reps", notes: str = "Test note") -> TrackEntry:
     return TrackEntry(
         exercise=name,
         entry_date="2026-06-11",
-        set_values=values,
-        set_labels=labels,
-        notes="Test note",
+        value=value,
+        notes=notes,
         logged_at="2026-06-11T09:00:00",
     )
 
@@ -33,11 +30,11 @@ def test_delete_entry(store: TrackStore):
 
 def test_update_preserves_logged_at_when_empty(store: TrackStore):
     store.add(_sample_entry())
-    updated = _sample_entry(values=["20 reps"])
+    updated = _sample_entry(value="20 reps")
     updated.logged_at = ""
     store.update(0, updated)
     assert store.entries[0].logged_at == "2026-06-11T09:00:00"
-    assert store.entries[0].set_values == ["20 reps"]
+    assert store.entries[0].value == "20 reps"
 
 
 def test_rename_name_updates_entries(store: TrackStore):
@@ -57,13 +54,18 @@ def test_remove_name_deletes_matching_entries(store: TrackStore):
 
 
 def test_dropdown_values_includes_used_and_custom(store: TrackStore):
-    store.add(_sample_entry(values=["42 widgets"]))
+    store.add(_sample_entry(value="42 widgets"))
     assert "42 widgets" in store.dropdown_values()
 
 
+def test_dropdown_notes_includes_used_notes(store: TrackStore):
+    store.add(_sample_entry(notes="Morning session"))
+    assert "Morning session" in store.dropdown_notes()
+
+
 def test_history_points_one_per_entry(store: TrackStore):
-    store.add(_sample_entry("Running", ["3 miles"]))
-    store.add(_sample_entry("Running", ["4 miles"]))
+    store.add(_sample_entry("Running", "3 miles"))
+    store.add(_sample_entry("Running", "4 miles"))
     points = store.history_points("Running")
     assert len(points) == 2
     assert points[0][1] == 3.0

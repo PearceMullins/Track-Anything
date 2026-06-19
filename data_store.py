@@ -8,15 +8,14 @@ from typing import Callable
 
 from models import (
     NAME_SUGGESTIONS,
-    LABEL_SUGGESTIONS,
     VALUE_SUGGESTIONS,
+    NOTE_SUGGESTIONS,
     TrackEntry,
     normalize_exercise_name,
-    normalize_set_label,
-    normalize_unit,
     normalize_value_text,
-    canonical_set_label,
+    normalize_note_text,
     canonical_value_text,
+    canonical_note_text,
 )
 from paths import data_file
 
@@ -28,12 +27,10 @@ def empty_store_payload() -> dict:
         "entries": [],
         "hidden_names": [],
         "custom_names": [],
-        "hidden_units": [],
-        "custom_units": [],
-        "hidden_set_labels": [],
-        "custom_set_labels": [],
         "hidden_values": [],
         "custom_values": [],
+        "hidden_notes": [],
+        "custom_notes": [],
     }
 
 
@@ -44,12 +41,10 @@ class TrackStore:
         self._entries: list[TrackEntry] = []
         self._hidden_names: set[str] = set()
         self._custom_names: set[str] = set()
-        self._hidden_units: set[str] = set()
-        self._custom_units: set[str] = set()
-        self._hidden_set_labels: set[str] = set()
-        self._custom_set_labels: set[str] = set()
         self._hidden_values: set[str] = set()
         self._custom_values: set[str] = set()
+        self._hidden_notes: set[str] = set()
+        self._custom_notes: set[str] = set()
         if self.path is not None:
             self.load()
 
@@ -71,36 +66,30 @@ class TrackStore:
         self._entries = []
         self._hidden_names = set()
         self._custom_names = set()
-        self._hidden_units = set()
-        self._custom_units = set()
-        self._hidden_set_labels = set()
-        self._custom_set_labels = set()
         self._hidden_values = set()
         self._custom_values = set()
+        self._hidden_notes = set()
+        self._custom_notes = set()
 
     def to_payload(self) -> dict:
         return {
             "entries": [e.to_dict() for e in self._entries],
             "hidden_names": sorted(self._hidden_names, key=str.lower),
             "custom_names": sorted(self._custom_names, key=str.lower),
-            "hidden_units": sorted(self._hidden_units, key=str.lower),
-            "custom_units": sorted(self._custom_units, key=str.lower),
-            "hidden_set_labels": sorted(self._hidden_set_labels, key=str.lower),
-            "custom_set_labels": sorted(self._custom_set_labels, key=str.lower),
             "hidden_values": sorted(self._hidden_values, key=str.lower),
             "custom_values": sorted(self._custom_values, key=str.lower),
+            "hidden_notes": sorted(self._hidden_notes, key=str.lower),
+            "custom_notes": sorted(self._custom_notes, key=str.lower),
         }
 
     def load_from_payload(self, raw: dict) -> None:
         self._entries = [TrackEntry.from_dict(item) for item in raw.get("entries", [])]
         self._hidden_names = {normalize_exercise_name(n) for n in raw.get("hidden_names", [])}
         self._custom_names = {normalize_exercise_name(n) for n in raw.get("custom_names", [])}
-        self._hidden_units = {normalize_unit(u) for u in raw.get("hidden_units", [])}
-        self._custom_units = {normalize_unit(u) for u in raw.get("custom_units", [])}
-        self._hidden_set_labels = {normalize_set_label(l) for l in raw.get("hidden_set_labels", [])}
-        self._custom_set_labels = {normalize_set_label(l) for l in raw.get("custom_set_labels", [])}
         self._hidden_values = {normalize_value_text(v) for v in raw.get("hidden_values", [])}
         self._custom_values = {normalize_value_text(v) for v in raw.get("custom_values", [])}
+        self._hidden_notes = {normalize_note_text(n) for n in raw.get("hidden_notes", [])}
+        self._custom_notes = {normalize_note_text(n) for n in raw.get("custom_notes", [])}
         self._backfill_logged_at()
         if self._canonicalize_custom_lists():
             self.save()
@@ -124,19 +113,24 @@ class TrackStore:
 
     def _remember_entry_lists(self, entry: TrackEntry) -> None:
         self._hidden_names.discard(normalize_exercise_name(entry.exercise))
-        for label in entry.set_labels:
-            normalized = normalize_set_label(label)
-            if normalized:
-                self._hidden_set_labels.discard(normalized)
-        for value in entry.set_values:
-            normalized = normalize_value_text(value)
-            if normalized:
-                self._hidden_values.discard(normalized)
+        normalized = normalize_value_text(entry.value)
+        if normalized:
+            self._hidden_values.discard(normalized)
+        note = normalize_note_text(entry.notes)
+        if note:
+            self._hidden_notes.discard(note)
 
     def delete(self, index: int) -> None:
         if 0 <= index < len(self._entries):
             del self._entries[index]
             self.save()
+
+    def delete_entries(self, indices: list[int]) -> None:
+        to_remove = {i for i in indices if 0 <= i < len(self._entries)}
+        if not to_remove:
+            return
+        self._entries = [e for i, e in enumerate(self._entries) if i not in to_remove]
+        self.save()
 
     def update(self, index: int, entry: TrackEntry) -> None:
         if 0 <= index < len(self._entries):
@@ -202,103 +196,12 @@ class TrackStore:
             total += self.remove_name(name)
         return total
 
-    def used_units(self) -> set[str]:
-        return {normalize_unit(e.unit) for e in self._entries if normalize_unit(e.unit)}
-
-    def dropdown_units(self) -> list[str]:
-        units: set[str] = set(self.used_units())
-        units |= self._custom_units
-        units -= self._hidden_units
-        return sorted(units, key=str.lower)
-
-    def rename_unit(self, old_unit: str, new_unit: str) -> None:
-        old = normalize_unit(old_unit)
-        new = normalize_unit(new_unit)
-        if not new:
-            raise ValueError("Unit cannot be empty.")
-        if old == new:
-            return
-
-        had_entries = False
-        for entry in self._entries:
-            if normalize_unit(entry.unit) == old:
-                entry.unit = new
-                had_entries = True
-
-        self._hidden_units.add(old)
-        self._hidden_units.discard(new)
-        self._custom_units.discard(old)
-
-        if not had_entries and new not in self.used_units():
-            self._custom_units.add(new)
-        else:
-            self._custom_units.discard(new)
-
-        self.save()
-
-    def remove_unit(self, unit: str) -> None:
-        unit = normalize_unit(unit)
-        self._hidden_units.add(unit)
-        self._custom_units.discard(unit)
-        self.save()
-
-    def used_set_labels(self) -> set[str]:
-        labels: set[str] = set()
-        for entry in self._entries:
-            for label in entry.set_labels:
-                normalized = normalize_set_label(label)
-                if normalized:
-                    labels.add(normalized)
-        return labels
-
-    def dropdown_set_labels(self) -> list[str]:
-        labels: set[str] = set(self.used_set_labels())
-        labels |= self._custom_set_labels
-        for suggestion in LABEL_SUGGESTIONS:
-            if suggestion not in self._hidden_set_labels:
-                labels.add(suggestion)
-        labels -= self._hidden_set_labels
-        return sorted({canonical_set_label(l) for l in labels}, key=str.lower)
-
-    def rename_set_label(self, old_label: str, new_label: str) -> None:
-        old = normalize_set_label(old_label)
-        new = normalize_set_label(new_label)
-        if not new:
-            raise ValueError("Set label cannot be empty.")
-        if old == new:
-            return
-
-        had_entries = False
-        for entry in self._entries:
-            for i, label in enumerate(entry.set_labels):
-                if normalize_set_label(label) == old:
-                    entry.set_labels[i] = new
-                    had_entries = True
-
-        self._hidden_set_labels.add(old)
-        self._hidden_set_labels.discard(new)
-        self._custom_set_labels.discard(old)
-
-        if not had_entries and new not in self.used_set_labels():
-            self._custom_set_labels.add(new)
-        else:
-            self._custom_set_labels.discard(new)
-
-        self.save()
-
-    def remove_set_label(self, label: str) -> None:
-        label = normalize_set_label(label)
-        self._hidden_set_labels.add(label)
-        self._custom_set_labels.discard(label)
-        self.save()
-
     def used_values(self) -> set[str]:
         values: set[str] = set()
         for entry in self._entries:
-            for value in entry.set_values:
-                normalized = normalize_value_text(value)
-                if normalized:
-                    values.add(normalized)
+            normalized = normalize_value_text(entry.value)
+            if normalized:
+                values.add(normalized)
         return values
 
     def dropdown_values(self) -> list[str]:
@@ -320,10 +223,9 @@ class TrackStore:
 
         had_entries = False
         for entry in self._entries:
-            for i, value in enumerate(entry.set_values):
-                if normalize_value_text(value) == old:
-                    entry.set_values[i] = new
-                    had_entries = True
+            if normalize_value_text(entry.value) == old:
+                entry.value = new
+                had_entries = True
 
         self._hidden_values.add(old)
         self._hidden_values.discard(new)
@@ -342,6 +244,78 @@ class TrackStore:
         self._custom_values.discard(value)
         self.save()
 
+    def remove_values(self, values: list[str]) -> None:
+        changed = False
+        for value in values:
+            normalized = normalize_value_text(value)
+            if not normalized:
+                continue
+            self._hidden_values.add(normalized)
+            self._custom_values.discard(normalized)
+            changed = True
+        if changed:
+            self.save()
+
+    def used_notes(self) -> set[str]:
+        notes: set[str] = set()
+        for entry in self._entries:
+            normalized = normalize_note_text(entry.notes)
+            if normalized:
+                notes.add(normalized)
+        return notes
+
+    def dropdown_notes(self) -> list[str]:
+        notes: set[str] = set(self.used_notes())
+        notes |= self._custom_notes
+        for suggestion in NOTE_SUGGESTIONS:
+            if suggestion not in self._hidden_notes:
+                notes.add(suggestion)
+        notes -= self._hidden_notes
+        return sorted({canonical_note_text(n) for n in notes}, key=str.lower)
+
+    def rename_note(self, old_note: str, new_note: str) -> None:
+        old = normalize_note_text(old_note)
+        new = normalize_note_text(new_note)
+        if not new:
+            raise ValueError("Note cannot be empty.")
+        if old == new:
+            return
+
+        had_entries = False
+        for entry in self._entries:
+            if normalize_note_text(entry.notes) == old:
+                entry.notes = new
+                had_entries = True
+
+        self._hidden_notes.add(old)
+        self._hidden_notes.discard(new)
+        self._custom_notes.discard(old)
+
+        if not had_entries and new not in self.used_notes():
+            self._custom_notes.add(new)
+        else:
+            self._custom_notes.discard(new)
+
+        self.save()
+
+    def remove_note(self, note: str) -> None:
+        note = normalize_note_text(note)
+        self._hidden_notes.add(note)
+        self._custom_notes.discard(note)
+        self.save()
+
+    def remove_notes(self, notes: list[str]) -> None:
+        changed = False
+        for note in notes:
+            normalized = normalize_note_text(note)
+            if not normalized:
+                continue
+            self._hidden_notes.add(normalized)
+            self._custom_notes.discard(normalized)
+            changed = True
+        if changed:
+            self.save()
+
     def entries_for_exercise(self, exercise: str) -> list[TrackEntry]:
         return [e for e in self._entries if e.exercise == exercise]
 
@@ -356,7 +330,7 @@ class TrackStore:
             idx = same_day.get(entry.entry_date, 0)
             same_day[entry.entry_date] = idx + 1
             when = self._chart_datetime(entry.entry_date, idx)
-            points.append((when, entry.volume))
+            points.append((when, entry.numeric_value))
         return points
 
     @staticmethod
@@ -365,7 +339,6 @@ class TrackStore:
         return base.replace(hour=12, minute=0, second=0) + timedelta(minutes=same_day_index * 30)
 
     def _backfill_logged_at(self) -> bool:
-        """Assign timestamps to older entries so each log is a distinct chart point."""
         changed = False
         counts: dict[tuple[str, str], int] = {}
         for entry in self._entries:
@@ -380,10 +353,9 @@ class TrackStore:
         return changed
 
     def _canonicalize_custom_lists(self) -> bool:
-        """Fold custom label/value lists to canonical suggestion casing."""
-        new_labels = {canonical_set_label(l) for l in self._custom_set_labels}
         new_values = {canonical_value_text(v) for v in self._custom_values}
-        changed = new_labels != self._custom_set_labels or new_values != self._custom_values
-        self._custom_set_labels = new_labels
+        new_notes = {canonical_note_text(n) for n in self._custom_notes}
+        changed = new_values != self._custom_values or new_notes != self._custom_notes
         self._custom_values = new_values
+        self._custom_notes = new_notes
         return changed

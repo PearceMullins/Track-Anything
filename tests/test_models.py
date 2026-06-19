@@ -2,11 +2,8 @@
 
 from datetime import date
 
-import pytest
-
 from models import (
     TrackEntry,
-    align_set_labels,
     normalize_exercise_name,
     normalize_value_text,
     parse_numeric_value,
@@ -20,15 +17,13 @@ def test_parse_numeric_value_extracts_numbers():
     assert parse_numeric_value("no number") == 0.0
 
 
-def test_track_entry_volume_sums_values():
+def test_track_entry_numeric_value():
     entry = TrackEntry(
         exercise="Pushups",
         entry_date="2026-06-11",
-        set_values=["10 reps", "5 reps"],
-        set_labels=["Set A", "Set B"],
+        value="10 reps",
     )
-    assert entry.volume == 15.0
-    assert entry.set_count == 2
+    assert entry.numeric_value == 10.0
 
 
 def test_track_entry_migrates_legacy_workout_date():
@@ -40,6 +35,21 @@ def test_track_entry_migrates_legacy_workout_date():
         }
     )
     assert entry.entry_date == "2026-01-15"
+    assert entry.value == "20 pages"
+
+
+def test_track_entry_migrates_legacy_rows():
+    entry = TrackEntry.from_dict(
+        {
+            "exercise": "Bench",
+            "entry_date": "2026-01-01",
+            "set_values": ["10 reps", "12.5 reps"],
+            "set_labels": ["Set 1", "Set 2"],
+            "notes": "Good day",
+        }
+    )
+    assert entry.value == "10 reps"
+    assert "Set 2" in entry.notes
 
 
 def test_track_entry_migrates_legacy_numeric_values():
@@ -47,16 +57,11 @@ def test_track_entry_migrates_legacy_numeric_values():
         {
             "exercise": "Bench",
             "entry_date": "2026-01-01",
-            "set_values": [10, 12.5],
+            "set_values": [10],
             "unit": "reps",
         }
     )
-    assert entry.set_values == ["10 reps", "12.5 reps"]
-
-
-def test_align_set_labels_pads_and_trims():
-    assert align_set_labels(["A"], 3) == ["A", "", ""]
-    assert align_set_labels(["A", "B", "C", "D"], 2) == ["A", "B"]
+    assert entry.value == "10 reps"
 
 
 def test_normalize_strips_extra_whitespace():
@@ -68,22 +73,11 @@ def test_track_entry_round_trip_dict():
     original = TrackEntry(
         exercise="Running",
         entry_date=date.today().isoformat(),
-        set_values=["3.1 miles"],
-        set_labels=["Morning"],
+        value="3.1 miles",
         notes="Felt good",
         logged_at="2026-06-11T08:00:00",
     )
     restored = TrackEntry.from_dict(original.to_dict())
     assert restored.exercise == original.exercise
-    assert restored.set_values == original.set_values
+    assert restored.value == original.value
     assert restored.notes == original.notes
-
-
-def test_track_entry_empty_values_have_zero_volume():
-    entry = TrackEntry(
-        exercise="Test",
-        entry_date="2026-06-11",
-        set_values=[],
-    )
-    assert entry.volume == 0.0
-    assert entry.set_count == 0

@@ -56,6 +56,14 @@ export function deleteEntry(index: number): Promise<Bootstrap> {
   return request(`/entries/${index}`, { method: "DELETE" });
 }
 
+export function deleteEntries(indices: number[]): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localDeleteEntries(indices));
+  return request("/entries/delete-batch", {
+    method: "POST",
+    body: JSON.stringify({ indices }),
+  });
+}
+
 export function fetchChart(name: string): Promise<{ name: string; points: ChartPoint[] }> {
   if (isLocalMode()) return runLocal(() => local.localFetchChart(name));
   return request(`/charts/${encodeURIComponent(name)}`);
@@ -74,19 +82,6 @@ export function removeName(name: string): Promise<Bootstrap> {
   return request("/names/remove", { method: "POST", body: JSON.stringify({ name }) });
 }
 
-export function renameLabel(oldValue: string, newValue: string): Promise<Bootstrap> {
-  if (isLocalMode()) return runLocal(() => local.localRenameLabel(oldValue, newValue));
-  return request("/labels/rename", {
-    method: "POST",
-    body: JSON.stringify({ old_value: oldValue, new_value: newValue }),
-  });
-}
-
-export function removeLabel(name: string): Promise<Bootstrap> {
-  if (isLocalMode()) return runLocal(() => local.localRemoveLabel(name));
-  return request("/labels/remove", { method: "POST", body: JSON.stringify({ name }) });
-}
-
 export function renameValue(oldValue: string, newValue: string): Promise<Bootstrap> {
   if (isLocalMode()) return runLocal(() => local.localRenameValue(oldValue, newValue));
   return request("/values/rename", {
@@ -98,6 +93,29 @@ export function renameValue(oldValue: string, newValue: string): Promise<Bootstr
 export function removeValue(name: string): Promise<Bootstrap> {
   if (isLocalMode()) return runLocal(() => local.localRemoveValue(name));
   return request("/values/remove", { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export function removeValues(names: string[]): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localRemoveValues(names));
+  return request("/values/remove-batch", { method: "POST", body: JSON.stringify({ names }) });
+}
+
+export function renameNote(oldValue: string, newValue: string): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localRenameNote(oldValue, newValue));
+  return request("/notes/rename", {
+    method: "POST",
+    body: JSON.stringify({ old_value: oldValue, new_value: newValue }),
+  });
+}
+
+export function removeNote(name: string): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localRemoveNote(name));
+  return request("/notes/remove", { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export function removeNotes(names: string[]): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localRemoveNotes(names));
+  return request("/notes/remove-batch", { method: "POST", body: JSON.stringify({ names }) });
 }
 
 export function deleteAllNames(names: string[]): Promise<Bootstrap> {

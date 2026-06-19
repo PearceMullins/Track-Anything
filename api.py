@@ -7,7 +7,6 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from models import TrackEntry, logged_at_for_entry_date, normalize_exercise_name, normalize_value_text
@@ -15,6 +14,17 @@ from profile_manager import ProfileManager
 
 profiles = ProfileManager()
 DIST = Path(__file__).parent / "frontend" / "dist"
+
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+
+def _file_response(path: Path, *, cache: bool = False) -> FileResponse:
+    headers = None if cache else NO_CACHE_HEADERS
+    return FileResponse(path, headers=headers)
 
 app = FastAPI(title="Track Anything API")
 app.add_middleware(
@@ -25,16 +35,11 @@ app.add_middleware(
 )
 
 
-class RowInput(BaseModel):
-    label: str = ""
-    value: str
-
-
 class EntryInput(BaseModel):
     exercise: str
     entry_date: str = ""
     workout_date: str = ""  # legacy alias
-    rows: list[RowInput] = Field(min_length=1)
+    value: str = ""
     notes: str = ""
     logged_at: str = ""
 
@@ -46,6 +51,10 @@ class RenameInput(BaseModel):
 
 class DeleteNamesInput(BaseModel):
     names: list[str] = Field(min_length=1)
+
+
+class DeleteEntriesInput(BaseModel):
+    indices: list[int] = Field(min_length=1)
 
 
 class ProfileNameInput(BaseModel):
@@ -60,31 +69,20 @@ def _serialize_entry(index: int, entry: TrackEntry) -> dict:
     return {
         "index": index,
         **entry.to_dict(),
-        "volume": entry.volume,
-        "set_count": entry.set_count,
+        "numeric_value": entry.numeric_value,
     }
-
-
-def _format_total(volume: float) -> str:
-    if volume == int(volume):
-        return str(int(volume))
-    return f"{volume:g}"
 
 
 def _history_rows() -> list[dict]:
     rows: list[dict] = []
     for index, entry in enumerate(_store().entries):
-        labels = [label.strip() or "—" for label in entry.set_labels]
         rows.append(
             {
                 "entry_index": index,
                 "entry_date": entry.entry_date,
                 "name": entry.exercise,
-                "labels": labels,
-                "values": list(entry.set_values),
+                "value": entry.value,
                 "notes": entry.notes,
-                "total": entry.volume,
-                "total_display": _format_total(entry.volume),
             }
         )
     return rows
@@ -96,8 +94,8 @@ def _bootstrap() -> dict:
         "entries": [_serialize_entry(i, e) for i, e in enumerate(store.entries)],
         "history_rows": _history_rows(),
         "dropdown_names": store.dropdown_names(),
-        "dropdown_set_labels": store.dropdown_set_labels(),
         "dropdown_values": store.dropdown_values(),
+        "dropdown_notes": store.dropdown_notes(),
         "chart_names": store.exercise_names(),
         "active_profile": profiles.active_profile,
         "dropdown_profiles": profiles.dropdown_profiles(),
@@ -108,21 +106,9 @@ def _entry_from_input(data: EntryInput) -> TrackEntry:
     exercise = normalize_exercise_name(data.exercise)
     if not exercise:
         raise HTTPException(400, "Name is required.")
-    set_values = []
-    set_labels = []
-    for row in data.rows:
-        value = normalize_value_text(row.value)
-        label = row.label.strip()
-        if not value:
-            continue
-        if not label:
-            raise HTTPException(400, "Each row needs a label.")
-        set_labels.append(label)
-        set_values.append(value)
-    if not set_values:
-        raise HTTPException(400, "At least one value is required.")
-    if any(not label for label in set_labels):
-        raise HTTPException(400, "Each row needs a label.")
+    value = normalize_value_text(data.value)
+    if not value:
+        raise HTTPException(400, "Value is required.")
     entry_date = data.entry_date or data.workout_date
     if not entry_date:
         raise HTTPException(400, "Date is required.")
@@ -130,11 +116,9 @@ def _entry_from_input(data: EntryInput) -> TrackEntry:
     return TrackEntry(
         exercise=exercise,
         entry_date=entry_date,
-        set_values=set_values,
-        set_labels=set_labels,
+        value=value,
         notes=data.notes.strip(),
         logged_at=logged_at,
-        unit="",
     )
 
 
@@ -170,12 +154,18 @@ def delete_entry(index: int) -> dict:
     return _bootstrap()
 
 
+@app.post("/api/entries/delete-batch")
+def delete_entries_batch(body: DeleteEntriesInput) -> dict:
+    _store().delete_entries(body.indices)
+    return _bootstrap()
+
+
 @app.get("/api/charts/{name}")
 def chart_points(name: str) -> dict:
     points = _store().history_points(name)
     return {
         "name": name,
-        "points": [{"date": dt.isoformat(), "total": vol} for dt, vol in points],
+        "points": [{"date": dt.isoformat(), "value": val} for dt, val in points],
     }
 
 
@@ -227,21 +217,6 @@ def remove_profile(body: ProfileNameInput) -> dict:
     return _bootstrap()
 
 
-@app.post("/api/labels/rename")
-def rename_label(body: RenameInput) -> dict:
-    try:
-        _store().rename_set_label(body.old_value, body.new_value)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    return _bootstrap()
-
-
-@app.post("/api/labels/remove")
-def remove_label(body: dict) -> dict:
-    _store().remove_set_label(body.get("name", ""))
-    return _bootstrap()
-
-
 @app.post("/api/values/rename")
 def rename_value(body: RenameInput) -> dict:
     try:
@@ -257,8 +232,41 @@ def remove_value(body: dict) -> dict:
     return _bootstrap()
 
 
+@app.post("/api/values/remove-batch")
+def remove_values_batch(body: DeleteNamesInput) -> dict:
+    _store().remove_values(body.names)
+    return _bootstrap()
+
+
+@app.post("/api/notes/rename")
+def rename_note(body: RenameInput) -> dict:
+    try:
+        _store().rename_note(body.old_value, body.new_value)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _bootstrap()
+
+
+@app.post("/api/notes/remove")
+def remove_note(body: dict) -> dict:
+    _store().remove_note(body.get("name", ""))
+    return _bootstrap()
+
+
+@app.post("/api/notes/remove-batch")
+def remove_notes_batch(body: DeleteNamesInput) -> dict:
+    _store().remove_notes(body.names)
+    return _bootstrap()
+
+
 if DIST.exists():
-    app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
+
+    @app.get("/assets/{asset_path:path}")
+    def static_assets(asset_path: str) -> FileResponse:
+        target = DIST / "assets" / asset_path
+        if not target.is_file():
+            raise HTTPException(404)
+        return _file_response(target, cache=True)
 
     @app.get("/{full_path:path}")
     def spa(full_path: str) -> FileResponse:
@@ -266,5 +274,5 @@ if DIST.exists():
             raise HTTPException(404)
         target = DIST / full_path
         if full_path and target.is_file():
-            return FileResponse(target)
-        return FileResponse(DIST / "index.html")
+            return _file_response(target)
+        return _file_response(DIST / "index.html")

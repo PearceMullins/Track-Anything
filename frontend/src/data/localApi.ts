@@ -1,6 +1,7 @@
 /** Offline API implementation used by Capacitor / local-storage builds. */
 
 import type { Bootstrap, ChartPoint } from "../types";
+import { chartPointsForExercise } from "../chartData";
 import { buildBootstrap, entryFromInput, type EntryInput } from "./bootstrap";
 import { getProfileManager } from "./profileManager";
 
@@ -38,8 +39,14 @@ export function localDeleteEntry(index: number): Bootstrap {
   return bootstrap();
 }
 
+export function localDeleteEntries(indices: number[]): Bootstrap {
+  getProfileManager().trackStore.deleteEntries(indices);
+  return bootstrap();
+}
+
 export function localFetchChart(name: string): { name: string; points: ChartPoint[] } {
-  return { name, points: getProfileManager().trackStore.historyPoints(name) };
+  const data = bootstrap();
+  return { name, points: chartPointsForExercise(data.entries, name) };
 }
 
 export function localRenameName(oldValue: string, newValue: string): Bootstrap {
@@ -72,16 +79,6 @@ export function localRemoveProfile(name: string): Bootstrap {
   return bootstrap();
 }
 
-export function localRenameLabel(oldValue: string, newValue: string): Bootstrap {
-  getProfileManager().trackStore.renameSetLabel(oldValue, newValue);
-  return bootstrap();
-}
-
-export function localRemoveLabel(name: string): Bootstrap {
-  getProfileManager().trackStore.removeSetLabel(name);
-  return bootstrap();
-}
-
 export function localRenameValue(oldValue: string, newValue: string): Bootstrap {
   getProfileManager().trackStore.renameValue(oldValue, newValue);
   return bootstrap();
@@ -89,5 +86,25 @@ export function localRenameValue(oldValue: string, newValue: string): Bootstrap 
 
 export function localRemoveValue(name: string): Bootstrap {
   getProfileManager().trackStore.removeValue(name);
+  return bootstrap();
+}
+
+export function localRemoveValues(names: string[]): Bootstrap {
+  getProfileManager().trackStore.removeValues(names);
+  return bootstrap();
+}
+
+export function localRenameNote(oldValue: string, newValue: string): Bootstrap {
+  getProfileManager().trackStore.renameNote(oldValue, newValue);
+  return bootstrap();
+}
+
+export function localRemoveNote(name: string): Bootstrap {
+  getProfileManager().trackStore.removeNote(name);
+  return bootstrap();
+}
+
+export function localRemoveNotes(names: string[]): Bootstrap {
+  getProfileManager().trackStore.removeNotes(names);
   return bootstrap();
 }

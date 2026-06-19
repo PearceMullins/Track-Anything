@@ -35,6 +35,11 @@ def main() -> None:
         action="store_true",
         help="Only start API; run `npm run dev` in frontend/ separately.",
     )
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Rebuild the React frontend before starting (use after code updates).",
+    )
     args = parser.parse_args()
 
     if args.dev_frontend:
@@ -43,10 +48,12 @@ def main() -> None:
         uvicorn.run("api:app", host="127.0.0.1", port=args.port, reload=True)
         return
 
-    if not DIST.exists():
-        print("Frontend not built. Run: cd frontend && npm install && npm run build")
-        print("Or: python main.py --dev-frontend  (with npm run dev in frontend/)")
-        sys.exit(1)
+    if not DIST.exists() or args.rebuild:
+        if args.rebuild:
+            print("Rebuilding frontend...")
+        else:
+            print("Frontend not built. Building now...")
+        subprocess.check_call(["npm", "run", "build"], cwd=ROOT / "frontend", shell=True)
 
     run_server(port=args.port, open_browser=not args.no_browser)
 

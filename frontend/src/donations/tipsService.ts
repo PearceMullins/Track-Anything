@@ -32,18 +32,35 @@ export async function checkTipsBilling(): Promise<boolean> {
   }
 }
 
+export const TIPS_NOT_LINKED_MESSAGE =
+  "Google Play could not find your tip products. Confirm tip_small is Active, Internal testing has a rolled-out signed AAB (1.0.2+), your Gmail is under License testing, then reinstall from the internal test link and wait up to 4 hours.";
+
 export async function loadTipProducts(): Promise<TipProduct[]> {
   if (!isTipsAvailableOnDevice()) return [];
 
-  const { products } = await NativePurchases.getProducts({
-    productIdentifiers: [...TIP_PRODUCT_IDS],
-    productType: PURCHASE_TYPE.INAPP,
-  });
+  const found: TipProduct[] = [];
+  for (const productId of TIP_PRODUCT_IDS) {
+    try {
+      const { product } = await NativePurchases.getProduct({
+        productIdentifier: productId,
+        productType: PURCHASE_TYPE.INAPP,
+      });
+      found.push(toTipProduct(product));
+    } catch {
+      // Product may not exist in Play Console yet — skip missing IDs.
+    }
+  }
+
+  if (!found.length) {
+    throw new Error(TIPS_NOT_LINKED_MESSAGE);
+  }
 
   const order = new Map(TIP_PRODUCT_IDS.map((id, i) => [id, i]));
-  return products
-    .map(toTipProduct)
-    .sort((a, b) => (order.get(a.id as (typeof TIP_PRODUCT_IDS)[number]) ?? 99) - (order.get(b.id as (typeof TIP_PRODUCT_IDS)[number]) ?? 99));
+  return found.sort(
+    (a, b) =>
+      (order.get(a.id as (typeof TIP_PRODUCT_IDS)[number]) ?? 99) -
+      (order.get(b.id as (typeof TIP_PRODUCT_IDS)[number]) ?? 99),
+  );
 }
 
 export async function purchaseTip(productId: string): Promise<void> {

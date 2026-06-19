@@ -165,7 +165,7 @@ export default function App() {
       </div>
 
       <footer className="footer">
-        Total adds up the numbers in each entry&apos;s values (e.g. 10 reps + 5 reps = 15).
+        Each entry has a name and value. Notes are optional and appear on chart points.
       </footer>
 
       {supportOpen && <SupportModal onClose={() => setSupportOpen(false)} />}

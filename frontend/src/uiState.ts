@@ -1,15 +1,10 @@
 export type AppTab = "log" | "charts";
 
-export interface EntryDraftRow {
-  label: string;
-  value: string;
-}
-
 export interface EntryDraft {
   name: string;
   date: string;
+  value: string;
   notes: string;
-  rows: EntryDraftRow[];
 }
 
 export interface ProfileUiSlice {
@@ -18,7 +13,9 @@ export interface ProfileUiSlice {
   entryDraftDay?: string;
   chartSelected?: string[];
   historyDisplayNames?: string[];
+  /** @deprecated use historySelectedIndices */
   historySelected?: number | null;
+  historySelectedIndices?: number[];
 }
 
 export interface UiState {
@@ -37,21 +34,53 @@ function emptyUiState(): UiState {
   return { tab: "log", byProfile: {} };
 }
 
+function normalizeDraft(raw: unknown): EntryDraft | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const draft = raw as Record<string, unknown>;
+  if (typeof draft.value === "string") {
+    return {
+      name: String(draft.name ?? ""),
+      date: String(draft.date ?? ""),
+      value: draft.value,
+      notes: String(draft.notes ?? ""),
+    };
+  }
+  const rows = draft.rows as Array<{ label?: string; value?: string }> | undefined;
+  const firstRow = rows?.find((row) => row.value?.trim());
+  return {
+    name: String(draft.name ?? ""),
+    date: String(draft.date ?? ""),
+    value: firstRow?.value?.trim() ?? "",
+    notes: String(draft.notes ?? ""),
+  };
+}
+
 function migrateLegacy(raw: Record<string, unknown>): UiState {
   const state = emptyUiState();
   if (raw.tab === "log" || raw.tab === "charts") {
     state.tab = raw.tab;
   }
   const legacySlice: ProfileUiSlice = {};
-  if (raw.entryDraft) legacySlice.entryDraft = raw.entryDraft as EntryDraft;
+  const entryDraft = normalizeDraft(raw.entryDraft);
+  if (entryDraft) legacySlice.entryDraft = entryDraft;
   if (raw.chartSelected) legacySlice.chartSelected = raw.chartSelected as string[];
   if (raw.historyDisplayNames) legacySlice.historyDisplayNames = raw.historyDisplayNames as string[];
-  if (raw.historySelected !== undefined) legacySlice.historySelected = raw.historySelected as number | null;
+  if (Array.isArray(raw.historySelectedIndices)) {
+    legacySlice.historySelectedIndices = raw.historySelectedIndices as number[];
+  } else if (raw.historySelected !== undefined && raw.historySelected !== null) {
+    legacySlice.historySelectedIndices = [raw.historySelected as number];
+  }
   if (Object.keys(legacySlice).length) {
     state.byProfile[DEFAULT_PROFILE_KEY] = legacySlice;
   }
   if (raw.byProfile && typeof raw.byProfile === "object") {
-    state.byProfile = { ...state.byProfile, ...(raw.byProfile as Record<string, ProfileUiSlice>) };
+    const byProfile = raw.byProfile as Record<string, ProfileUiSlice>;
+    for (const [profile, slice] of Object.entries(byProfile)) {
+      state.byProfile[profile] = {
+        ...slice,
+        entryDraft: slice.entryDraft ? normalizeDraft(slice.entryDraft) : undefined,
+      };
+    }
   }
   return state;
 }

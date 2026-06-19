@@ -357,7 +357,8 @@ select {
   min-width: 0;
 }
 
-.suggestion-input .input {
+.suggestion-input .input,
+.suggestion-input .textarea {
   width: 100%;
 }
 
@@ -505,6 +506,84 @@ tbody tr.selected {
   height: 16px;
 }
 
+/* Custom checkboxes — native ones are often invisible on dark WebView backgrounds */
+.ui-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 2px solid var(--text-muted);
+  border-radius: 4px;
+  background: var(--bg-input);
+  cursor: pointer;
+  vertical-align: middle;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.ui-checkbox:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.ui-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.ui-checkbox:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.ui-checkbox:indeterminate {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.ui-checkbox:indeterminate::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 7px;
+  width: 10px;
+  height: 0;
+  border: none;
+  border-top: 2px solid #fff;
+  transform: none;
+}
+
+.row-check-cell {
+  width: 44px;
+  min-width: 44px;
+  padding: 8px 10px !important;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.row-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  cursor: pointer;
+  min-height: 24px;
+  min-width: 24px;
+}
+
+.row-check .ui-checkbox {
+  display: block;
+}
+
 .chart-card {
   margin-bottom: 20px;
 }
@@ -513,6 +592,163 @@ tbody tr.selected {
   margin: 0 0 12px;
   font-size: 1rem;
   font-weight: 600;
+}
+
+.chart-hint {
+  margin: -4px 0 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.total-calc-field {
+  margin-bottom: 0;
+}
+
+.total-calc-select {
+  max-width: 280px;
+}
+
+.formula-editor {
+  margin-top: 12px;
+}
+
+.formula-editor label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.formula-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.formula-editor code {
+  font-size: 0.85em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+}
+
+.formula-insert-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.formula-insert-btn {
+  min-width: 36px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.formula-preview {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.formula-error {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+
+.chart-tooltip {
+  background: #181824;
+  border: 1px solid #2e2e42;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #eef0f8;
+  font-size: 0.85rem;
+  max-width: 260px;
+}
+
+.chart-tooltip-date {
+  color: #8b8da3;
+  margin-bottom: 6px;
+}
+
+.chart-tooltip-total {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.chart-tooltip-sets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart-tooltip-sets li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chart-tooltip-label {
+  color: #8b8da3;
+}
+
+.chart-tooltip-notes {
+  margin-top: 8px;
+  color: #8b8da3;
+  font-size: 0.8rem;
+}
+
+.chart-point-detail {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+
+.chart-point-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.chart-point-detail-total {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.chart-point-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.chart-point-detail-table th,
+.chart-point-detail-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-point-detail-table th {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.chart-point-detail-notes {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.8rem;
 }
 
 .empty {
@@ -601,10 +837,30 @@ tbody tr.selected {
 }
 
 .modal-list li {
-  padding: 10px 12px;
+  padding: 0;
   border-bottom: 1px solid var(--border);
-  cursor: pointer;
   transition: background 0.12s;
+}
+
+.modal-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.modal-list-item input {
+  flex-shrink: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.modal-list-item span {
+  flex: 1;
+  min-width: 0;
 }
 
 .modal-list li:last-child {

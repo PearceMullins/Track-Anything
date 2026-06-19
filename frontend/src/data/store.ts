@@ -2,16 +2,15 @@
 
 import {
   NAME_SUGGESTIONS,
-  LABEL_SUGGESTIONS,
   VALUE_SUGGESTIONS,
+  NOTE_SUGGESTIONS,
   TrackEntry,
   entryFromDict,
   normalizeExerciseName,
-  normalizeSetLabel,
-  normalizeUnit,
   normalizeValueText,
-  canonicalSetLabel,
+  normalizeNoteText,
   canonicalValueText,
+  canonicalNoteText,
   parseNumericValue,
 } from "./models";
 
@@ -21,12 +20,10 @@ export interface PersistedPayload {
   entries: TrackEntry[];
   hidden_names: string[];
   custom_names: string[];
-  hidden_units: string[];
-  custom_units: string[];
-  hidden_set_labels: string[];
-  custom_set_labels: string[];
   hidden_values: string[];
   custom_values: string[];
+  hidden_notes: string[];
+  custom_notes: string[];
 }
 
 export function emptyPayload(): PersistedPayload {
@@ -34,12 +31,10 @@ export function emptyPayload(): PersistedPayload {
     entries: [],
     hidden_names: [],
     custom_names: [],
-    hidden_units: [],
-    custom_units: [],
-    hidden_set_labels: [],
-    custom_set_labels: [],
     hidden_values: [],
     custom_values: [],
+    hidden_notes: [],
+    custom_notes: [],
   };
 }
 
@@ -56,8 +51,8 @@ export class LocalTrackStore {
   private listCache: {
     exercises?: string[];
     names?: string[];
-    labels?: string[];
     values?: string[];
+    notes?: string[];
   } = {};
 
   constructor(options?: { autosave?: boolean }) {
@@ -103,21 +98,18 @@ export class LocalTrackStore {
   private loadFromRaw(parsed: PersistedPayload): boolean {
     this.payload = {
       ...emptyPayload(),
-      ...parsed,
       entries: (parsed.entries ?? []).map((e) =>
         entryFromDict(e as unknown as Record<string, unknown>),
       ),
       hidden_names: (parsed.hidden_names ?? []).map(normalizeExerciseName),
       custom_names: (parsed.custom_names ?? []).map(normalizeExerciseName),
-      hidden_units: (parsed.hidden_units ?? []).map(normalizeUnit),
-      custom_units: (parsed.custom_units ?? []).map(normalizeUnit),
-      hidden_set_labels: (parsed.hidden_set_labels ?? []).map(normalizeSetLabel),
-      custom_set_labels: (parsed.custom_set_labels ?? []).map((l) =>
-        canonicalSetLabel(normalizeSetLabel(l)),
-      ),
       hidden_values: (parsed.hidden_values ?? []).map(normalizeValueText),
       custom_values: (parsed.custom_values ?? []).map((v) =>
         canonicalValueText(normalizeValueText(v)),
+      ),
+      hidden_notes: (parsed.hidden_notes ?? []).map(normalizeNoteText),
+      custom_notes: (parsed.custom_notes ?? []).map((n) =>
+        canonicalNoteText(normalizeNoteText(n)),
       ),
     };
     return this.backfillLoggedAt();
@@ -151,6 +143,13 @@ export class LocalTrackStore {
       this.payload.entries.splice(index, 1);
       this.save();
     }
+  }
+
+  deleteEntries(indices: number[]): void {
+    const toRemove = new Set(indices.filter((i) => i >= 0 && i < this.payload.entries.length));
+    if (toRemove.size === 0) return;
+    this.payload.entries = this.payload.entries.filter((_, i) => !toRemove.has(i));
+    this.save();
   }
 
   update(index: number, entry: TrackEntry): void {
@@ -187,22 +186,6 @@ export class LocalTrackStore {
     return result;
   }
 
-  dropdownSetLabels(): string[] {
-    if (this.listCache.labels) return this.listCache.labels;
-    const labels = new Set(this.usedSetLabels());
-    this.payload.custom_set_labels.forEach((l) => labels.add(l));
-    LABEL_SUGGESTIONS.forEach((s) => {
-      if (!this.payload.hidden_set_labels.includes(s)) labels.add(s);
-    });
-    this.payload.hidden_set_labels.forEach((l) => labels.delete(l));
-    const result = [...labels]
-      .map((l) => canonicalSetLabel(l))
-      .filter((l, i, arr) => arr.findIndex((x) => x.toLowerCase() === l.toLowerCase()) === i)
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-    this.listCache.labels = result;
-    return result;
-  }
-
   dropdownValues(): string[] {
     if (this.listCache.values) return this.listCache.values;
     const values = new Set(this.usedValues());
@@ -216,6 +199,22 @@ export class LocalTrackStore {
       .filter((v, i, arr) => arr.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i)
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     this.listCache.values = result;
+    return result;
+  }
+
+  dropdownNotes(): string[] {
+    if (this.listCache.notes) return this.listCache.notes;
+    const notes = new Set(this.usedNotes());
+    this.payload.custom_notes.forEach((n) => notes.add(n));
+    NOTE_SUGGESTIONS.forEach((s) => {
+      if (!this.payload.hidden_notes.includes(s)) notes.add(s);
+    });
+    this.payload.hidden_notes.forEach((n) => notes.delete(n));
+    const result = [...notes]
+      .map((n) => canonicalNoteText(n))
+      .filter((n, i, arr) => arr.findIndex((x) => x.toLowerCase() === n.toLowerCase()) === i)
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    this.listCache.notes = result;
     return result;
   }
 
@@ -257,40 +256,6 @@ export class LocalTrackStore {
     }
   }
 
-  renameSetLabel(oldLabel: string, newLabel: string): void {
-    const old = normalizeSetLabel(oldLabel);
-    const neu = normalizeSetLabel(newLabel);
-    if (!neu) throw new Error("Set label cannot be empty.");
-    if (old === neu) return;
-    let hadEntries = false;
-    for (const entry of this.payload.entries) {
-      entry.set_labels = entry.set_labels.map((l) => {
-        if (normalizeSetLabel(l) === old) {
-          hadEntries = true;
-          return neu;
-        }
-        return l;
-      });
-    }
-    this.payload.hidden_set_labels = [
-      ...new Set([...this.payload.hidden_set_labels, old]),
-    ].filter((l) => l !== neu);
-    this.payload.custom_set_labels = this.payload.custom_set_labels.filter((l) => l !== old);
-    if (!hadEntries && !this.usedSetLabels().has(neu)) {
-      this.payload.custom_set_labels.push(neu);
-    } else {
-      this.payload.custom_set_labels = this.payload.custom_set_labels.filter((l) => l !== neu);
-    }
-    this.save();
-  }
-
-  removeSetLabel(label: string): void {
-    const normalized = normalizeSetLabel(label);
-    this.payload.hidden_set_labels = [...new Set([...this.payload.hidden_set_labels, normalized])];
-    this.payload.custom_set_labels = this.payload.custom_set_labels.filter((l) => l !== normalized);
-    this.save();
-  }
-
   renameValue(oldValue: string, newValue: string): void {
     const old = normalizeValueText(oldValue);
     const neu = normalizeValueText(newValue);
@@ -298,13 +263,10 @@ export class LocalTrackStore {
     if (old === neu) return;
     let hadEntries = false;
     for (const entry of this.payload.entries) {
-      entry.set_values = entry.set_values.map((v) => {
-        if (normalizeValueText(v) === old) {
-          hadEntries = true;
-          return neu;
-        }
-        return v;
-      });
+      if (normalizeValueText(entry.value) === old) {
+        entry.value = neu;
+        hadEntries = true;
+      }
     }
     this.payload.hidden_values = [...new Set([...this.payload.hidden_values, old])].filter(
       (v) => v !== neu,
@@ -325,7 +287,62 @@ export class LocalTrackStore {
     this.save();
   }
 
-  historyPoints(exercise: string): { date: string; total: number }[] {
+  removeValues(values: string[]): void {
+    let changed = false;
+    for (const value of values) {
+      const normalized = normalizeValueText(value);
+      if (!normalized) continue;
+      this.payload.hidden_values = [...new Set([...this.payload.hidden_values, normalized])];
+      this.payload.custom_values = this.payload.custom_values.filter((v) => v !== normalized);
+      changed = true;
+    }
+    if (changed) this.save();
+  }
+
+  renameNote(oldNote: string, newNote: string): void {
+    const old = normalizeNoteText(oldNote);
+    const neu = normalizeNoteText(newNote);
+    if (!neu) throw new Error("Note cannot be empty.");
+    if (old === neu) return;
+    let hadEntries = false;
+    for (const entry of this.payload.entries) {
+      if (normalizeNoteText(entry.notes) === old) {
+        entry.notes = neu;
+        hadEntries = true;
+      }
+    }
+    this.payload.hidden_notes = [...new Set([...this.payload.hidden_notes, old])].filter(
+      (n) => n !== neu,
+    );
+    this.payload.custom_notes = this.payload.custom_notes.filter((n) => n !== old);
+    if (!hadEntries && !this.usedNotes().has(neu)) {
+      this.payload.custom_notes.push(neu);
+    } else {
+      this.payload.custom_notes = this.payload.custom_notes.filter((n) => n !== neu);
+    }
+    this.save();
+  }
+
+  removeNote(note: string): void {
+    const normalized = normalizeNoteText(note);
+    this.payload.hidden_notes = [...new Set([...this.payload.hidden_notes, normalized])];
+    this.payload.custom_notes = this.payload.custom_notes.filter((n) => n !== normalized);
+    this.save();
+  }
+
+  removeNotes(notes: string[]): void {
+    let changed = false;
+    for (const note of notes) {
+      const normalized = normalizeNoteText(note);
+      if (!normalized) continue;
+      this.payload.hidden_notes = [...new Set([...this.payload.hidden_notes, normalized])];
+      this.payload.custom_notes = this.payload.custom_notes.filter((n) => n !== normalized);
+      changed = true;
+    }
+    if (changed) this.save();
+  }
+
+  historyPoints(exercise: string): { date: string; value: number }[] {
     const entries = this.payload.entries
       .filter((e) => e.exercise === exercise)
       .sort((a, b) => {
@@ -337,8 +354,7 @@ export class LocalTrackStore {
       const idx = sameDay[entry.entry_date] ?? 0;
       sameDay[entry.entry_date] = idx + 1;
       const when = chartDatetime(entry.entry_date, idx);
-      const total = entry.set_values.reduce((s, v) => s + parseNumericValue(v), 0);
-      return { date: when.toISOString(), total };
+      return { date: when.toISOString(), value: parseNumericValue(entry.value) };
     });
   }
 
@@ -346,40 +362,32 @@ export class LocalTrackStore {
     this.payload.hidden_names = this.payload.hidden_names.filter(
       (n) => n !== normalizeExerciseName(entry.exercise),
     );
-    for (const label of entry.set_labels) {
-      const n = normalizeSetLabel(label);
-      if (n) {
-        this.payload.hidden_set_labels = this.payload.hidden_set_labels.filter((l) => l !== n);
-      }
+    const n = normalizeValueText(entry.value);
+    if (n) {
+      this.payload.hidden_values = this.payload.hidden_values.filter((v) => v !== n);
     }
-    for (const value of entry.set_values) {
-      const n = normalizeValueText(value);
-      if (n) {
-        this.payload.hidden_values = this.payload.hidden_values.filter((v) => v !== n);
-      }
+    const note = normalizeNoteText(entry.notes);
+    if (note) {
+      this.payload.hidden_notes = this.payload.hidden_notes.filter((item) => item !== note);
     }
-  }
-
-  private usedSetLabels(): Set<string> {
-    const labels = new Set<string>();
-    for (const entry of this.payload.entries) {
-      for (const label of entry.set_labels) {
-        const n = normalizeSetLabel(label);
-        if (n) labels.add(n);
-      }
-    }
-    return labels;
   }
 
   private usedValues(): Set<string> {
     const values = new Set<string>();
     for (const entry of this.payload.entries) {
-      for (const value of entry.set_values) {
-        const n = normalizeValueText(value);
-        if (n) values.add(n);
-      }
+      const n = normalizeValueText(entry.value);
+      if (n) values.add(n);
     }
     return values;
+  }
+
+  private usedNotes(): Set<string> {
+    const notes = new Set<string>();
+    for (const entry of this.payload.entries) {
+      const n = normalizeNoteText(entry.notes);
+      if (n) notes.add(n);
+    }
+    return notes;
   }
 
   private backfillLoggedAt(): boolean {

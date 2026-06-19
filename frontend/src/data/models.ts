@@ -8,15 +8,6 @@ export const NAME_SUGGESTIONS = [
   "Running",
 ] as const;
 
-export const LABEL_SUGGESTIONS = [
-  "first set",
-  "second set",
-  "third set",
-  "Morning",
-  "Evening",
-  "Warm-up",
-] as const;
-
 export const VALUE_SUGGESTIONS = [
   "10 reps",
   "5 reps",
@@ -27,36 +18,37 @@ export const VALUE_SUGGESTIONS = [
   "150 lbs",
 ] as const;
 
+export const NOTE_SUGGESTIONS = [
+  "Morning",
+  "Evening",
+  "Felt good",
+  "PR day",
+] as const;
+
 export interface TrackEntry {
   exercise: string;
   entry_date: string;
-  set_values: string[];
-  set_labels: string[];
+  value: string;
   notes: string;
   logged_at: string;
-  unit: string;
-}
-
-export function normalizeUnit(unit: string): string {
-  return unit.trim().split(/\s+/).join(" ");
 }
 
 export function normalizeExerciseName(name: string): string {
   return name.trim().split(/\s+/).join(" ");
 }
 
-export function normalizeSetLabel(label: string): string {
-  return label.trim().split(/\s+/).join(" ");
-}
-
 export function normalizeValueText(value: string): string {
   return value.trim().split(/\s+/).join(" ");
 }
 
-export function canonicalSetLabel(label: string): string {
-  const normalized = normalizeSetLabel(label);
+export function normalizeNoteText(note: string): string {
+  return note.trim();
+}
+
+export function canonicalNoteText(note: string): string {
+  const normalized = normalizeNoteText(note);
   const lower = normalized.toLowerCase();
-  for (const suggestion of LABEL_SUGGESTIONS) {
+  for (const suggestion of NOTE_SUGGESTIONS) {
     if (suggestion.toLowerCase() === lower) return suggestion;
   }
   return normalized;
@@ -78,12 +70,6 @@ export function parseNumericValue(text: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function alignSetLabels(labels: string[], count: number): string[] {
-  const normalized = labels.map(normalizeSetLabel);
-  while (normalized.length < count) normalized.push("");
-  return normalized.slice(0, count);
-}
-
 function coerceValueText(raw: unknown, unit: string): string {
   if (typeof raw === "string") return normalizeValueText(raw);
   const number = Number(raw);
@@ -91,29 +77,59 @@ function coerceValueText(raw: unknown, unit: string): string {
   return unit ? `${text} ${unit}` : text;
 }
 
-export function entryFromDict(data: Record<string, unknown>): TrackEntry {
-  const unit = normalizeUnit(String(data.unit ?? ""));
-  const rawValues = data.set_values as unknown[];
-  const set_values = rawValues.map((v) => coerceValueText(v, unit));
-  const rawLabels = data.set_labels as string[] | undefined;
-  const set_labels = alignSetLabels(
-    rawLabels ? rawLabels.map(String) : [],
-    set_values.length,
-  );
-  const entry_date = String(data.entry_date ?? data.workout_date ?? "");
+function migrateLegacyEntry(data: Record<string, unknown>, entry_date: string): TrackEntry {
+  const unit = String(data.unit ?? "").trim();
+  const rawValues = (data.set_values as unknown[]) ?? [];
+  const setValues = rawValues.map((v) => coerceValueText(v, unit));
+  const setLabels = (data.set_labels as string[] | undefined) ?? [];
+  const value = setValues[0]
+    ? canonicalValueText(normalizeValueText(setValues[0]))
+    : "";
+  let notes = String(data.notes ?? "");
+  if (setValues.length > 1) {
+    const extra = setValues
+      .slice(1)
+      .map((v, i) => {
+        const label = setLabels[i + 1]?.trim() || `Row ${i + 2}`;
+        return `${label}: ${v}`;
+      })
+      .join("; ");
+    notes = notes ? `${notes}\n${extra}` : extra;
+  }
   return {
     exercise: String(data.exercise),
     entry_date,
-    set_values: set_values.map((v) => canonicalValueText(normalizeValueText(v))),
-    set_labels: set_labels.map(canonicalSetLabel),
-    notes: String(data.notes ?? ""),
+    value,
+    notes,
     logged_at: String(data.logged_at ?? ""),
-    unit,
   };
 }
 
-export function entryVolume(entry: TrackEntry): number {
-  return entry.set_values.reduce((sum, v) => sum + parseNumericValue(v), 0);
+export function entryFromDict(data: Record<string, unknown>): TrackEntry {
+  const entry_date = String(data.entry_date ?? data.workout_date ?? "");
+  if (typeof data.value === "string" && data.value.trim()) {
+    return {
+      exercise: String(data.exercise),
+      entry_date,
+      value: canonicalValueText(normalizeValueText(data.value)),
+      notes: String(data.notes ?? ""),
+      logged_at: String(data.logged_at ?? ""),
+    };
+  }
+  if (Array.isArray(data.set_values) && data.set_values.length > 0) {
+    return migrateLegacyEntry(data, entry_date);
+  }
+  return {
+    exercise: String(data.exercise),
+    entry_date,
+    value: "",
+    notes: String(data.notes ?? ""),
+    logged_at: String(data.logged_at ?? ""),
+  };
+}
+
+export function entryNumericValue(entry: TrackEntry): number {
+  return parseNumericValue(entry.value);
 }
 
 export function todayIso(): string {

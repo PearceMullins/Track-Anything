@@ -48,7 +48,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
         if (cancelled) return;
         if (!loaded.length) {
           setError(
-            "Tip products are not set up yet. Create tip_small, tip_medium, and tip_large in Play Console, then install from an internal test track.",
+            "No tip products loaded. Create and activate tip_small in Play Console (tip_medium and tip_large are optional), then reinstall from the internal test link.",
           );
         } else {
           setProducts(loaded);

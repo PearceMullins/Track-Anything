@@ -28,27 +28,35 @@ const HistoryTableRow = memo(function HistoryTableRow({
       onClick={() => onSelect(row.entry_index)}
       onDoubleClick={() => onEdit(row.entry_index)}
     >
+      <td className="row-check-cell" onClick={(e) => e.stopPropagation()}>
+        <label className="row-check">
+          <input
+            type="checkbox"
+            className="ui-checkbox"
+            checked={selected}
+            onChange={() => onSelect(row.entry_index)}
+            aria-label={`Select entry ${isoToDisplay(row.entry_date)} — ${row.name}`}
+          />
+        </label>
+      </td>
       <td className="history-anchor">{isoToDisplay(row.entry_date)}</td>
       <td className="history-anchor">{row.name}</td>
-      <td className="history-stack">
-        {row.labels.map((label, i) => (
-          <div key={i} className="stack-line">
-            {label}
-          </div>
-        ))}
-      </td>
-      <td className="history-stack">
-        {row.values.map((value, i) => (
-          <div key={i} className="stack-line">
-            {value}
-          </div>
-        ))}
-      </td>
-      <td className="history-anchor history-total">{row.total_display}</td>
+      <td className="history-anchor">{row.value}</td>
       <td className="history-anchor">{row.notes || "—"}</td>
     </tr>
   );
 });
+
+function loadSelectedIndices(profile: string): Set<number> {
+  const slice = loadUiSlice(profile);
+  if (slice.historySelectedIndices?.length) {
+    return new Set(slice.historySelectedIndices);
+  }
+  if (slice.historySelected != null) {
+    return new Set([slice.historySelected]);
+  }
+  return new Set();
+}
 
 export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps) {
   const profile = data.active_profile;
@@ -58,9 +66,7 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
     if (saved?.length) return new Set(saved.filter((n) => names.includes(n)));
     return new Set(names);
   });
-  const [selected, setSelected] = useState<number | null>(
-    () => loadUiSlice(profile).historySelected ?? null,
-  );
+  const [selected, setSelected] = useState<Set<number>>(() => loadSelectedIndices(profile));
   const [editing, setEditing] = useState<EntryRecord | null>(null);
 
   useEffect(() => {
@@ -79,14 +85,16 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
   }, [names]);
 
   useEffect(() => {
-    saveUiSlice(profile, { historySelected: selected });
+    saveUiSlice(profile, { historySelectedIndices: [...selected] });
   }, [profile, selected]);
 
   useEffect(() => {
-    if (selected !== null && !data.entries.some((e) => e.index === selected)) {
-      setSelected(null);
-    }
-  }, [data.entries, selected]);
+    const valid = new Set(data.entries.map((e) => e.index));
+    setSelected((prev) => {
+      const next = new Set([...prev].filter((i) => valid.has(i)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [data.entries]);
 
   const toggleName = (name: string) => {
     setDisplayNames((prev) => {
@@ -106,12 +114,35 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
   );
 
   useEffect(() => {
-    if (selected !== null && !visibleRows.some((row) => row.entry_index === selected)) {
-      setSelected(null);
-    }
-  }, [visibleRows, selected]);
+    const visible = new Set(visibleRows.map((row) => row.entry_index));
+    setSelected((prev) => {
+      const next = new Set([...prev].filter((i) => visible.has(i)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [visibleRows]);
 
-  const select = (entryIndex: number) => setSelected((prev) => (prev === entryIndex ? null : entryIndex));
+  const toggleSelect = (entryIndex: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(entryIndex)) next.delete(entryIndex);
+      else next.add(entryIndex);
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => setSelected(new Set(visibleRows.map((row) => row.entry_index)));
+  const clearSelection = () => setSelected(new Set());
+
+  const selectedList = [...selected];
+  const allVisibleSelected =
+    visibleRows.length > 0 && visibleRows.every((row) => selected.has(row.entry_index));
+  const someVisibleSelected =
+    visibleRows.some((row) => selected.has(row.entry_index)) && !allVisibleSelected;
+
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) clearSelection();
+    else selectAllVisible();
+  };
 
   const openEdit = (entryIndex: number) => {
     const entry = data.entries.find((e) => e.index === entryIndex);
@@ -119,24 +150,29 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
   };
 
   const editSelected = () => {
-    if (selected === null) {
-      alert("Select an entry to edit.");
+    if (selectedList.length !== 1) {
+      alert("Select exactly one entry to edit.");
       return;
     }
-    const entry = data.entries.find((e) => e.index === selected);
+    const entry = data.entries.find((e) => e.index === selectedList[0]);
     if (!entry) return;
     if (!window.confirm(`Edit this entry?\n\n${isoToDisplay(entry.entry_date)} — ${entry.exercise}`)) return;
     setEditing(entry);
   };
 
   const deleteSelected = async () => {
-    if (selected === null) {
-      alert("Select an entry to delete.");
+    if (selectedList.length === 0) {
+      alert("Select one or more entries to delete.");
       return;
     }
-    if (!window.confirm("Delete selected entry?")) return;
-    onChange(await api.deleteEntry(selected));
-    setSelected(null);
+    const count = selectedList.length;
+    const msg =
+      count === 1
+        ? "Delete the selected entry?"
+        : `Delete ${count} selected entries?`;
+    if (!window.confirm(msg)) return;
+    onChange(await api.deleteEntries(selectedList));
+    setSelected(new Set());
   };
 
   return (
@@ -164,6 +200,7 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
               <label key={name} className="check-item">
                 <input
                   type="checkbox"
+                  className="ui-checkbox"
                   checked={displayNames.has(name)}
                   onChange={() => toggleName(name)}
                 />
@@ -180,11 +217,17 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
             History
           </h2>
           <div className="btn-row">
+            <button type="button" className="btn btn-ghost" onClick={selectAllVisible}>
+              Select all
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={clearSelection}>
+              Clear selection
+            </button>
             <button type="button" className="btn btn-ghost" onClick={editSelected}>
               Edit
             </button>
             <button type="button" className="btn btn-ghost btn-danger" onClick={deleteSelected}>
-              Delete
+              Delete{selectedList.length > 1 ? ` (${selectedList.length})` : ""}
             </button>
             <button type="button" className="btn btn-ghost btn-danger" onClick={onDeleteAll}>
               Delete all
@@ -201,11 +244,23 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
             <table>
               <thead>
                 <tr>
+                  <th className="row-check-cell">
+                    <label className="row-check">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        checked={allVisibleSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someVisibleSelected;
+                        }}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="Select all visible entries"
+                      />
+                    </label>
+                  </th>
                   <th>Date</th>
                   <th>Name</th>
-                  <th>Label</th>
                   <th>Value</th>
-                  <th>Total</th>
                   <th>Notes</th>
                 </tr>
               </thead>
@@ -214,8 +269,8 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
                   <HistoryTableRow
                     key={row.entry_index}
                     row={row}
-                    selected={selected === row.entry_index}
-                    onSelect={select}
+                    selected={selected.has(row.entry_index)}
+                    onSelect={toggleSelect}
                     onEdit={openEdit}
                   />
                 ))}

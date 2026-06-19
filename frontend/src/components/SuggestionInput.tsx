@@ -10,6 +10,7 @@ interface SuggestionInputProps {
   id?: string;
   className?: string;
   disabled?: boolean;
+  multiline?: boolean;
   /** Called when the user finishes editing (blur, pick, or Enter). Receives the current value. */
   onBlur?: (value: string) => void;
 }
@@ -20,8 +21,9 @@ export const SuggestionInput = memo(function SuggestionInput({
   onChange,
   placeholder,
   id,
-  className = "input",
+  className,
   disabled,
+  multiline = false,
   onBlur,
 }: SuggestionInputProps) {
   const autoId = useId();
@@ -31,6 +33,7 @@ export const SuggestionInput = memo(function SuggestionInput({
   const skipBlurCommit = useRef(false);
   const [open, setOpen] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fieldClass = className ?? (multiline ? "textarea" : "input");
 
   valueRef.current = value;
 
@@ -96,12 +99,18 @@ export const SuggestionInput = memo(function SuggestionInput({
     commit(option);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleChange = (nextValue: string) => {
+    valueRef.current = nextValue;
+    onChange(nextValue);
+    setOpen(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === "Escape") {
       skipBlurCommit.current = true;
       close(false);
       e.currentTarget.blur();
-    } else if (e.key === "Enter") {
+    } else if (e.key === "Enter" && !multiline) {
       e.preventDefault();
       skipBlurCommit.current = true;
       clearBlurTimer();
@@ -113,24 +122,37 @@ export const SuggestionInput = memo(function SuggestionInput({
 
   return (
     <div className="suggestion-input" ref={rootRef}>
-      <input
-        id={inputId}
-        className={className}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => {
-          valueRef.current = e.target.value;
-          onChange(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-      />
+      {multiline ? (
+        <textarea
+          id={inputId}
+          className={fieldClass}
+          value={value}
+          disabled={disabled}
+          rows={3}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      ) : (
+        <input
+          id={inputId}
+          className={fieldClass}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+      )}
       {open && filtered.length > 0 && (
         <ul className="suggestion-list" role="listbox" aria-labelledby={inputId}>
           {filtered.map((option) => (

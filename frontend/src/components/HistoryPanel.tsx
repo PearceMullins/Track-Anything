@@ -16,11 +16,15 @@ const HistoryTableRow = memo(function HistoryTableRow({
   selected,
   onSelect,
   onEdit,
+  showValues,
+  showNotes,
 }: {
   row: HistoryRow;
   selected: boolean;
   onSelect: (entryIndex: number) => void;
   onEdit: (entryIndex: number) => void;
+  showValues: boolean;
+  showNotes: boolean;
 }) {
   return (
     <tr
@@ -41,8 +45,8 @@ const HistoryTableRow = memo(function HistoryTableRow({
       </td>
       <td className="history-anchor">{isoToDisplay(row.entry_date)}</td>
       <td className="history-anchor">{row.name}</td>
-      <td className="history-anchor">{row.value}</td>
-      <td className="history-anchor">{row.notes || "—"}</td>
+      {showValues && <td className="history-anchor">{row.value}</td>}
+      {showNotes && <td className="history-anchor">{row.notes || "-"}</td>}
     </tr>
   );
 });
@@ -68,10 +72,16 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
   });
   const [selected, setSelected] = useState<Set<number>>(() => loadSelectedIndices(profile));
   const [editing, setEditing] = useState<EntryRecord | null>(null);
+  const [showValues, setShowValues] = useState(() => loadUiSlice(profile).historyShowValues ?? true);
+  const [showNotes, setShowNotes] = useState(() => loadUiSlice(profile).historyShowNotes ?? true);
 
   useEffect(() => {
     saveUiSlice(profile, { historyDisplayNames: [...displayNames] });
   }, [profile, displayNames]);
+
+  useEffect(() => {
+    saveUiSlice(profile, { historyShowValues: showValues, historyShowNotes: showNotes });
+  }, [profile, showValues, showNotes]);
 
   useEffect(() => {
     setDisplayNames((prev) => {
@@ -216,6 +226,26 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
           <h2 className="card-title" style={{ margin: 0 }}>
             History
           </h2>
+          <div className="history-field-toggle" role="group" aria-label="History fields">
+            <label className="inline-check">
+              <input
+                type="checkbox"
+                className="ui-checkbox"
+                checked={showValues}
+                onChange={(e) => setShowValues(e.target.checked)}
+              />
+              Values
+            </label>
+            <label className="inline-check">
+              <input
+                type="checkbox"
+                className="ui-checkbox"
+                checked={showNotes}
+                onChange={(e) => setShowNotes(e.target.checked)}
+              />
+              Notes
+            </label>
+          </div>
           <div className="btn-row">
             <button type="button" className="btn btn-ghost" onClick={selectAllVisible}>
               Select all
@@ -260,8 +290,8 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
                   </th>
                   <th>Date</th>
                   <th>Name</th>
-                  <th>Value</th>
-                  <th>Notes</th>
+                  {showValues && <th>Value</th>}
+                  {showNotes && <th>Notes</th>}
                 </tr>
               </thead>
               <tbody>
@@ -272,6 +302,8 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
                     selected={selected.has(row.entry_index)}
                     onSelect={toggleSelect}
                     onEdit={openEdit}
+                    showValues={showValues}
+                    showNotes={showNotes}
                   />
                 ))}
               </tbody>

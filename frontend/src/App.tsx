@@ -10,6 +10,7 @@ import { ProfileBar } from "./components/ProfileBar";
 import { DeleteAllModal } from "./components/DeleteAllModal";
 import { ManageProfilesModal } from "./components/ManageProfilesModal";
 import { SupportModal } from "./components/SupportModal";
+import { DataToolsModal } from "./components/DataToolsModal";
 import { loadUiState, saveUiState, flushUiState, type AppTab } from "./uiState";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
   const [chartsSnapshot, setChartsSnapshot] = useState<Bootstrap | null>(null);
   const [historyReady, setHistoryReady] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [dataToolsOpen, setDataToolsOpen] = useState(false);
   const lastProfileRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
@@ -72,6 +74,11 @@ export default function App() {
       }
     }
   }, [data, tab]);
+
+  useEffect(() => {
+    if (!dataToolsOpen) return;
+    flushUiState();
+  }, [dataToolsOpen]);
 
   const changeTab = (next: AppTab) => {
     if (next === "charts" && data) {
@@ -134,6 +141,9 @@ export default function App() {
         >
           Progress Charts
         </button>
+        <button type="button" className="tab" onClick={() => setDataToolsOpen(true)}>
+          Data
+        </button>
         <button type="button" className="tab tab-donations" onClick={() => setSupportOpen(true)}>
           Donations
         </button>
@@ -169,6 +179,17 @@ export default function App() {
       </footer>
 
       {supportOpen && <SupportModal onClose={() => setSupportOpen(false)} />}
+
+      {dataToolsOpen && (
+        <DataToolsModal
+          onClose={() => setDataToolsOpen(false)}
+          onImported={(next) => {
+            onChange(next);
+            setTab(loadUiState().tab ?? "log");
+            setChartsSnapshot(null);
+          }}
+        />
+      )}
 
       {manage && (
         <ManageListModal

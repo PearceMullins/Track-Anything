@@ -13,6 +13,8 @@ export interface ProfileUiSlice {
   entryDraftDay?: string;
   chartSelected?: string[];
   historyDisplayNames?: string[];
+  historyShowValues?: boolean;
+  historyShowNotes?: boolean;
   /** @deprecated use historySelectedIndices */
   historySelected?: number | null;
   historySelectedIndices?: number[];
@@ -117,6 +119,16 @@ export function loadUiState(): UiState {
     cachedState = readFromStorage();
   }
   return cachedState;
+}
+
+export function exportUiState(): UiState {
+  return JSON.parse(JSON.stringify(loadUiState())) as UiState;
+}
+
+export function importUiState(raw: unknown): void {
+  if (!raw || typeof raw !== "object") return;
+  cachedState = migrateLegacy(raw as Record<string, unknown>);
+  flushUiState();
 }
 
 export function saveUiState(patch: Partial<UiState>): void {

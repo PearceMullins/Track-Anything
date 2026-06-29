@@ -22,6 +22,16 @@ interface LegacyRootFile {
   custom_profiles?: string[];
 }
 
+export interface AppDataExport {
+  app: "track-anything";
+  version: 2;
+  exported_at: string;
+  active_profile: string;
+  profiles: Record<string, PersistedPayload>;
+  hidden_profiles: string[];
+  custom_profiles: string[];
+}
+
 function profileStorageKey(name: string): string {
   return `${PROFILE_KEY_PREFIX}${name}`;
 }
@@ -144,6 +154,21 @@ export class ProfileManager {
     localStorage.setItem(profileStorageKey(normalized), JSON.stringify(payload));
   }
 
+  private normalizePayload(raw: unknown): PersistedPayload {
+    const store = new LocalTrackStore({ autosave: false });
+    store.loadPayload((raw ?? {}) as PersistedPayload);
+    return store.toPayload();
+  }
+
+  private clearProfileStorage(): void {
+    const keys: string[] = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(PROFILE_KEY_PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => localStorage.removeItem(key));
+  }
+
   private persistActive(payload: PersistedPayload): void {
     this.writeProfilePayload(this.active, payload);
   }
@@ -167,6 +192,64 @@ export class ProfileManager {
     this.customProfiles.forEach((n) => names.add(n));
     this.hiddenProfiles.forEach((n) => names.delete(n));
     return [...names].sort((a, b) => a.localeCompare(b));
+  }
+
+  exportData(): AppDataExport {
+    this.writeProfilePayload(this.active, this.store.clonePayload());
+    const names = [...new Set([...this.profileNames, this.active])].sort((a, b) =>
+      a.localeCompare(b),
+    );
+    const profiles: Record<string, PersistedPayload> = {};
+    for (const name of names) {
+      profiles[name] = this.normalizePayload(this.readProfilePayload(name));
+    }
+
+    return {
+      app: "track-anything",
+      version: 2,
+      exported_at: new Date().toISOString(),
+      active_profile: this.active,
+      profiles,
+      hidden_profiles: [...this.hiddenProfiles].sort((a, b) => a.localeCompare(b)),
+      custom_profiles: [...this.customProfiles].sort((a, b) => a.localeCompare(b)),
+    };
+  }
+
+  importData(raw: unknown): void {
+    if (!raw || typeof raw !== "object") throw new Error("Backup file is not valid.");
+    const data = raw as Partial<AppDataExport>;
+    if (!data.profiles || typeof data.profiles !== "object") {
+      throw new Error("Backup file is missing profiles.");
+    }
+
+    const nextProfiles: Record<string, PersistedPayload> = {};
+    for (const [rawName, payload] of Object.entries(data.profiles as Record<string, unknown>)) {
+      const name = normalizeProfileName(rawName);
+      if (name) nextProfiles[name] = this.normalizePayload(payload);
+    }
+    if (Object.keys(nextProfiles).length === 0) throw new Error("Backup file has no profiles.");
+    if (!nextProfiles[DEFAULT_PROFILE]) nextProfiles[DEFAULT_PROFILE] = emptyPayload();
+
+    const active = normalizeProfileName(data.active_profile || DEFAULT_PROFILE);
+    this.active = nextProfiles[active] ? active : DEFAULT_PROFILE;
+    this.profileNames = Object.keys(nextProfiles).sort((a, b) => a.localeCompare(b));
+    this.hiddenProfiles = new Set(
+      (Array.isArray(data.hidden_profiles) ? data.hidden_profiles : [])
+        .map(normalizeProfileName)
+        .filter(Boolean),
+    );
+    this.customProfiles = new Set(
+      (Array.isArray(data.custom_profiles) ? data.custom_profiles : [])
+        .map(normalizeProfileName)
+        .filter(Boolean),
+    );
+    this.payloadCache = {};
+    this.clearProfileStorage();
+    for (const [name, payload] of Object.entries(nextProfiles)) {
+      this.writeProfilePayload(name, payload);
+    }
+    this.applyActive(this.readProfilePayload(this.active));
+    this.syncRoot();
   }
 
   switchProfile(name: string): void {

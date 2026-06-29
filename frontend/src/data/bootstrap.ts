@@ -51,6 +51,8 @@ export function buildBootstrap(
     dropdown_names: store.dropdownNames(),
     dropdown_values: store.dropdownValues(),
     dropdown_notes: store.dropdownNotes(),
+    hidden_values: store.hiddenValues(),
+    hidden_notes: store.hiddenNotes(),
     chart_names: store.exerciseNames(),
     active_profile: activeProfile,
     dropdown_profiles: dropdownProfiles,

@@ -213,6 +213,12 @@ class TrackStore:
         values -= self._hidden_values
         return sorted({canonical_value_text(v) for v in values}, key=str.lower)
 
+    def hidden_values(self) -> list[str]:
+        return sorted(
+            {canonical_value_text(v) for v in self._hidden_values if v},
+            key=str.lower,
+        )
+
     def rename_value(self, old_value: str, new_value: str) -> None:
         old = normalize_value_text(old_value)
         new = normalize_value_text(new_value)
@@ -256,6 +262,18 @@ class TrackStore:
         if changed:
             self.save()
 
+    def restore_values(self, values: list[str]) -> None:
+        changed = False
+        for value in values:
+            normalized = normalize_value_text(value)
+            if not normalized:
+                continue
+            self._hidden_values.discard(normalized)
+            self._custom_values.add(canonical_value_text(normalized))
+            changed = True
+        if changed:
+            self.save()
+
     def used_notes(self) -> set[str]:
         notes: set[str] = set()
         for entry in self._entries:
@@ -272,6 +290,12 @@ class TrackStore:
                 notes.add(suggestion)
         notes -= self._hidden_notes
         return sorted({canonical_note_text(n) for n in notes}, key=str.lower)
+
+    def hidden_notes(self) -> list[str]:
+        return sorted(
+            {canonical_note_text(n) for n in self._hidden_notes if n},
+            key=str.lower,
+        )
 
     def rename_note(self, old_note: str, new_note: str) -> None:
         old = normalize_note_text(old_note)
@@ -312,6 +336,18 @@ class TrackStore:
                 continue
             self._hidden_notes.add(normalized)
             self._custom_notes.discard(normalized)
+            changed = True
+        if changed:
+            self.save()
+
+    def restore_notes(self, notes: list[str]) -> None:
+        changed = False
+        for note in notes:
+            normalized = normalize_note_text(note)
+            if not normalized:
+                continue
+            self._hidden_notes.discard(normalized)
+            self._custom_notes.add(canonical_note_text(normalized))
             changed = True
         if changed:
             self.save()

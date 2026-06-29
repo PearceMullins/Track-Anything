@@ -49,6 +49,7 @@ want to measure.
 | --- | --- |
 | **Windows** | Download [`TrackAnything.exe`](https://github.com/PearceMullins/Track-Anything/releases/latest) from GitHub Releases |
 | **Android** | Built with Capacitor; see [Play Store guide](PLAY_STORE.md) for packaging and testing |
+| **iPhone/iPad** | Built with Capacitor; see [App Store guide](APP_STORE.md) for packaging and testing |
 
 The Windows executable bundles the React UI and a local Python API. Your data is
 saved to `track_anything_data.json` next to the app.
@@ -60,7 +61,7 @@ saved to `track_anything_data.json` next to the app.
 - **History** — edit, delete, and review past entries
 - **Charts** — progress over time for any tracked name
 - **Local-first** — data stays on your device; no login required
-- **Android build** — Capacitor app with on-device storage
+- **Android and iOS builds** — Capacitor apps with on-device storage
 - **Optional tips** — Google Play donations only; no locked features
 
 ## Screenshots
@@ -111,10 +112,10 @@ Opens `http://127.0.0.1:8000` with the built UI and API.
 
 Output: `dist/TrackAnything.exe` (uses `assets/Track Anything Icon.ico`).
 
-## Android build
+## Mobile builds
 
-The Android app uses Capacitor and stores data on the device. It does not run
-the Python API on the phone.
+The Android and iOS apps use Capacitor and store data on the device. They do not
+run the Python API on phones.
 
 ```powershell
 npm install
@@ -123,15 +124,19 @@ npm install
 cd ..
 npm run mobile:build
 npx cap open android
+npx cap open ios
 ```
 
-Build a signed Android App Bundle in Android Studio. See **[PLAY_STORE.md](PLAY_STORE.md)** for the full release checklist.
+Build a signed Android App Bundle in Android Studio. Build a signed iOS archive
+in Xcode on macOS. See **[PLAY_STORE.md](PLAY_STORE.md)** and
+**[APP_STORE.md](APP_STORE.md)** for full release checklists.
 
 ## Project layout
 
 ```text
 frontend/              React + TypeScript + Vite UI
 android/               Capacitor Android project
+ios/                   Capacitor iOS project
 docs/privacy-policy/   GitHub Pages privacy policy
 tests/                 Python API and model tests
 scripts/               Test and release helper scripts
@@ -146,14 +151,15 @@ The maintained interface is the React app.
 | Document | Description |
 | --- | --- |
 | [PLAY_STORE.md](PLAY_STORE.md) | Google Play testing and release steps |
-| [DONATIONS.md](DONATIONS.md) | Optional Google Play tip product IDs |
+| [APP_STORE.md](APP_STORE.md) | Apple App Store testing and release steps |
+| [DONATIONS.md](DONATIONS.md) | Optional store tip product IDs |
 | [Privacy policy](PRIVACY.md) | On-device data and billing disclosure |
 | [SECURITY.md](SECURITY.md) | How to report security issues |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development and pull request guidelines |
 
 ### Privacy policy URL
 
-Use one of these URLs in Google Play Console and other listings:
+Use one of these URLs in Google Play Console, App Store Connect, and other listings:
 
 | When | URL |
 | --- | --- |
@@ -183,10 +189,10 @@ npm test
 ## Data and privacy
 
 - Desktop data is saved to `track_anything_data.json` next to the app.
-- Android data is saved locally on the device.
+- Android and iOS data is saved locally on the device.
 - No account is required.
 - Tracker data is not uploaded to developer servers.
-- Optional tips on Android are handled by Google Play Billing.
+- Optional tips on Android and iOS are handled by native store billing.
 
 ## License
 

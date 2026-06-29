@@ -15,6 +15,8 @@ def test_bootstrap_empty(client):
     assert "Calories" in data["dropdown_names"]
     assert "10 reps" in data["dropdown_values"]
     assert "Morning" in data["dropdown_notes"]
+    assert data["hidden_values"] == []
+    assert data["hidden_notes"] == []
     assert data["active_profile"] == "Default"
     assert "Default" in data["dropdown_profiles"]
 
@@ -70,3 +72,60 @@ def test_rename_name(client):
     )
     assert res.status_code == 200
     assert res.json()["entries"][0]["exercise"] == "Push Ups"
+
+
+def test_hide_and_show_values_and_notes(client):
+    client.post("/api/entries", json=ENTRY_BODY)
+
+    res = client.post("/api/values/remove-batch", json={"names": ["10 reps"]})
+    assert res.status_code == 200
+    assert "10 reps" not in res.json()["dropdown_values"]
+    assert "10 reps" in res.json()["hidden_values"]
+
+    res = client.post("/api/values/show-batch", json={"names": ["10 reps"]})
+    assert res.status_code == 200
+    assert "10 reps" in res.json()["dropdown_values"]
+    assert "10 reps" not in res.json()["hidden_values"]
+
+    res = client.post("/api/notes/remove-batch", json={"names": ["Morning session"]})
+    assert res.status_code == 200
+    assert "Morning session" not in res.json()["dropdown_notes"]
+    assert "Morning session" in res.json()["hidden_notes"]
+
+    res = client.post("/api/notes/show-batch", json={"names": ["Morning session"]})
+    assert res.status_code == 200
+    assert "Morning session" in res.json()["dropdown_notes"]
+    assert "Morning session" not in res.json()["hidden_notes"]
+
+
+def test_export_and_import_data(client):
+    client.post("/api/entries", json=ENTRY_BODY)
+    exported = client.get("/api/data/export").json()
+    assert exported["profiles"]["Default"]["entries"][0]["exercise"] == "Pushups"
+
+    imported = {
+        **exported,
+        "profiles": {
+            "Default": {
+                "entries": [
+                    {
+                        "exercise": "Running",
+                        "entry_date": "2026-06-12",
+                        "value": "3 miles",
+                        "notes": "",
+                        "logged_at": "2026-06-12T09:00:00",
+                    }
+                ],
+                "hidden_names": [],
+                "custom_names": [],
+                "hidden_values": [],
+                "custom_values": [],
+                "hidden_notes": [],
+                "custom_notes": [],
+            }
+        },
+    }
+
+    res = client.post("/api/data/import", json=imported)
+    assert res.status_code == 200
+    assert res.json()["entries"][0]["exercise"] == "Running"

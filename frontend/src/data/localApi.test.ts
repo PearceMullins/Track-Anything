@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { localCreateEntry, localFetchBootstrap } from "./localApi";
+import {
+  localCreateEntry,
+  localExportData,
+  localFetchBootstrap,
+  localImportData,
+  localRemoveNotes,
+  localRemoveValues,
+  localShowNotes,
+  localShowValues,
+  localSwitchProfile,
+} from "./localApi";
 
 describe("local store", () => {
   beforeEach(() => {
@@ -38,5 +48,60 @@ describe("local store", () => {
     });
     expect(localStorage.getItem("track_anything_p:Default")).toContain("Running");
     expect(localFetchBootstrap().entries[0].exercise).toBe("Running");
+  });
+});
+
+
+describe("local backup", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("hides and shows values and notes", () => {
+    localCreateEntry({
+      exercise: "Pushups",
+      entry_date: "2026-06-11",
+      value: "10 reps",
+      notes: "Morning session",
+    });
+
+    let data = localRemoveValues(["10 reps"]);
+    expect(data.dropdown_values).not.toContain("10 reps");
+    expect(data.hidden_values).toContain("10 reps");
+
+    data = localShowValues(["10 reps"]);
+    expect(data.dropdown_values).toContain("10 reps");
+    expect(data.hidden_values).not.toContain("10 reps");
+
+    data = localRemoveNotes(["Morning session"]);
+    expect(data.dropdown_notes).not.toContain("Morning session");
+    expect(data.hidden_notes).toContain("Morning session");
+
+    data = localShowNotes(["Morning session"]);
+    expect(data.dropdown_notes).toContain("Morning session");
+    expect(data.hidden_notes).not.toContain("Morning session");
+  });
+
+  it("exports and imports all profiles", () => {
+    localCreateEntry({
+      exercise: "Pushups",
+      entry_date: "2026-06-11",
+      value: "10 reps",
+    });
+    localSwitchProfile("Travel");
+    localCreateEntry({
+      exercise: "Walking",
+      entry_date: "2026-06-12",
+      value: "2 miles",
+    });
+
+    const backup = localExportData();
+    localStorage.clear();
+    const imported = localImportData(backup);
+
+    expect(imported.active_profile).toBe("Travel");
+    expect(imported.entries[0].exercise).toBe("Walking");
+    localSwitchProfile("Default");
+    expect(localFetchBootstrap().entries[0].exercise).toBe("Pushups");
   });
 });

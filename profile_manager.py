@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from data_store import TrackStore, empty_store_payload
@@ -95,6 +96,59 @@ class ProfileManager:
         names |= self._custom_profiles
         names -= self._hidden_profiles
         return sorted(names, key=str.lower)
+
+    def _normalized_payload(self, payload: dict | None) -> dict:
+        store = TrackStore(path=None)
+        store.load_from_payload(payload if isinstance(payload, dict) else {})
+        return store.to_payload()
+
+    def export_data(self) -> dict:
+        self._profiles[self._active] = self._store.to_payload()
+        return {
+            "app": "track-anything",
+            "version": 2,
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "active_profile": self._active,
+            "profiles": {
+                name: self._normalized_payload(payload)
+                for name, payload in sorted(self._profiles.items(), key=lambda item: item[0].lower())
+            },
+            "hidden_profiles": sorted(self._hidden_profiles, key=str.lower),
+            "custom_profiles": sorted(self._custom_profiles, key=str.lower),
+        }
+
+    def import_data(self, raw: dict) -> None:
+        if not isinstance(raw, dict):
+            raise ValueError("Backup file is not valid.")
+        raw_profiles = raw.get("profiles")
+        if not isinstance(raw_profiles, dict):
+            raise ValueError("Backup file is missing profiles.")
+
+        profiles: dict[str, dict] = {}
+        for raw_name, payload in raw_profiles.items():
+            name = normalize_profile_name(str(raw_name))
+            if name:
+                profiles[name] = self._normalized_payload(payload)
+
+        if not profiles:
+            raise ValueError("Backup file has no profiles.")
+        if DEFAULT_PROFILE not in profiles:
+            profiles[DEFAULT_PROFILE] = empty_store_payload()
+
+        active = normalize_profile_name(str(raw.get("active_profile") or DEFAULT_PROFILE))
+        if active not in profiles:
+            active = DEFAULT_PROFILE if DEFAULT_PROFILE in profiles else next(iter(profiles))
+
+        self._profiles = profiles
+        self._active = active
+        self._hidden_profiles = {
+            normalize_profile_name(str(n)) for n in raw.get("hidden_profiles", []) if str(n).strip()
+        }
+        self._custom_profiles = {
+            normalize_profile_name(str(n)) for n in raw.get("custom_profiles", []) if str(n).strip()
+        }
+        self._apply_active()
+        self.save_all()
 
     def switch_profile(self, name: str) -> None:
         name = normalize_profile_name(name)

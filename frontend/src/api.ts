@@ -1,6 +1,7 @@
 import type { Bootstrap, ChartPoint } from "./types";
 import { isLocalMode } from "./data/config";
 import type { EntryInput } from "./data/bootstrap";
+import type { AppDataExport } from "./data/profileManager";
 import * as local from "./data/localApi";
 
 const BASE = "/api";
@@ -35,6 +36,16 @@ function runLocal<T>(fn: () => T): Promise<T> {
 export function fetchBootstrap(): Promise<Bootstrap> {
   if (isLocalMode()) return runLocal(local.localFetchBootstrap);
   return request("/bootstrap");
+}
+
+export function exportAppData(): Promise<AppDataExport> {
+  if (isLocalMode()) return runLocal(local.localExportData);
+  return request("/data/export");
+}
+
+export function importAppData(raw: unknown): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localImportData(raw));
+  return request("/data/import", { method: "POST", body: JSON.stringify(raw) });
 }
 
 export function createEntry(body: unknown): Promise<Bootstrap> {
@@ -100,6 +111,11 @@ export function removeValues(names: string[]): Promise<Bootstrap> {
   return request("/values/remove-batch", { method: "POST", body: JSON.stringify({ names }) });
 }
 
+export function showValues(names: string[]): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localShowValues(names));
+  return request("/values/show-batch", { method: "POST", body: JSON.stringify({ names }) });
+}
+
 export function renameNote(oldValue: string, newValue: string): Promise<Bootstrap> {
   if (isLocalMode()) return runLocal(() => local.localRenameNote(oldValue, newValue));
   return request("/notes/rename", {
@@ -116,6 +132,11 @@ export function removeNote(name: string): Promise<Bootstrap> {
 export function removeNotes(names: string[]): Promise<Bootstrap> {
   if (isLocalMode()) return runLocal(() => local.localRemoveNotes(names));
   return request("/notes/remove-batch", { method: "POST", body: JSON.stringify({ names }) });
+}
+
+export function showNotes(names: string[]): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localShowNotes(names));
+  return request("/notes/show-batch", { method: "POST", body: JSON.stringify({ names }) });
 }
 
 export function deleteAllNames(names: string[]): Promise<Bootstrap> {

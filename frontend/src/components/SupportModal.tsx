@@ -28,7 +28,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
 
       if (!isTipsAvailableOnDevice()) {
         if (!cancelled) {
-          setError("Tips are available in the Android app installed from Google Play.");
+          setError("Tips are available in the Android and iOS store apps.");
           setLoading(false);
         }
         return;
@@ -37,7 +37,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
       const supported = await checkTipsBilling();
       if (!supported) {
         if (!cancelled) {
-          setError("Google Play billing is not available on this device.");
+          setError("Store billing is not available on this device.");
           setLoading(false);
         }
         return;
@@ -48,7 +48,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
         if (cancelled) return;
         if (!loaded.length) {
           setError(
-            "No tip products loaded. Create and activate tip_small in Play Console (tip_medium and tip_large are optional), then reinstall from the internal test link.",
+            "No tip products loaded. Create and activate tip products in the store console, then reinstall from a store test build.",
           );
         } else {
           setProducts(loaded);

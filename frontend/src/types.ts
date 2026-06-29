@@ -22,6 +22,8 @@ export interface Bootstrap {
   dropdown_names: string[];
   dropdown_values: string[];
   dropdown_notes: string[];
+  hidden_values: string[];
+  hidden_notes: string[];
   chart_names: string[];
   active_profile: string;
   dropdown_profiles: string[];

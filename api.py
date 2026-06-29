@@ -96,6 +96,8 @@ def _bootstrap() -> dict:
         "dropdown_names": store.dropdown_names(),
         "dropdown_values": store.dropdown_values(),
         "dropdown_notes": store.dropdown_notes(),
+        "hidden_values": store.hidden_values(),
+        "hidden_notes": store.hidden_notes(),
         "chart_names": store.exercise_names(),
         "active_profile": profiles.active_profile,
         "dropdown_profiles": profiles.dropdown_profiles(),
@@ -238,6 +240,12 @@ def remove_values_batch(body: DeleteNamesInput) -> dict:
     return _bootstrap()
 
 
+@app.post("/api/values/show-batch")
+def show_values_batch(body: DeleteNamesInput) -> dict:
+    _store().restore_values(body.names)
+    return _bootstrap()
+
+
 @app.post("/api/notes/rename")
 def rename_note(body: RenameInput) -> dict:
     try:
@@ -256,6 +264,26 @@ def remove_note(body: dict) -> dict:
 @app.post("/api/notes/remove-batch")
 def remove_notes_batch(body: DeleteNamesInput) -> dict:
     _store().remove_notes(body.names)
+    return _bootstrap()
+
+
+@app.post("/api/notes/show-batch")
+def show_notes_batch(body: DeleteNamesInput) -> dict:
+    _store().restore_notes(body.names)
+    return _bootstrap()
+
+
+@app.get("/api/data/export")
+def export_data() -> dict:
+    return profiles.export_data()
+
+
+@app.post("/api/data/import")
+def import_data(body: dict) -> dict:
+    try:
+        profiles.import_data(body)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     return _bootstrap()
 
 

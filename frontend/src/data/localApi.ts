@@ -3,7 +3,7 @@
 import type { Bootstrap, ChartPoint } from "../types";
 import { chartPointsForExercise } from "../chartData";
 import { buildBootstrap, entryFromInput, type EntryInput } from "./bootstrap";
-import { getProfileManager } from "./profileManager";
+import { getProfileManager, type AppDataExport } from "./profileManager";
 
 function bootstrap(): Bootstrap {
   const pm = getProfileManager();
@@ -11,6 +11,15 @@ function bootstrap(): Bootstrap {
 }
 
 export function localFetchBootstrap(): Bootstrap {
+  return bootstrap();
+}
+
+export function localExportData(): AppDataExport {
+  return getProfileManager().exportData();
+}
+
+export function localImportData(raw: unknown): Bootstrap {
+  getProfileManager().importData(raw);
   return bootstrap();
 }
 
@@ -94,6 +103,11 @@ export function localRemoveValues(names: string[]): Bootstrap {
   return bootstrap();
 }
 
+export function localShowValues(names: string[]): Bootstrap {
+  getProfileManager().trackStore.restoreValues(names);
+  return bootstrap();
+}
+
 export function localRenameNote(oldValue: string, newValue: string): Bootstrap {
   getProfileManager().trackStore.renameNote(oldValue, newValue);
   return bootstrap();
@@ -106,5 +120,10 @@ export function localRemoveNote(name: string): Bootstrap {
 
 export function localRemoveNotes(names: string[]): Bootstrap {
   getProfileManager().trackStore.removeNotes(names);
+  return bootstrap();
+}
+
+export function localShowNotes(names: string[]): Bootstrap {
+  getProfileManager().trackStore.restoreNotes(names);
   return bootstrap();
 }

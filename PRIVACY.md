@@ -25,8 +25,8 @@
 </p>
 
 <p align="center">
-  Effective date: June 16, 2026. This policy applies to the Track Anything Android app,
-  package <code>com.trackanything.app</code>.
+  Effective date: June 29, 2026. This policy applies to the Track Anything
+  Android and iOS apps, package/bundle ID <code>com.trackanything.app</code>.
 </p>
 
 <p align="center">
@@ -43,7 +43,7 @@
 
 Track Anything stores tracker data on your device. It has no developer-hosted account
 system, no ads, no analytics SDK, and no developer server upload for your tracker
-entries. Optional tips use Google Play Billing.
+entries. Optional tips use native store billing.
 
 ## What Track Anything Stores
 
@@ -63,22 +63,24 @@ SDKs.
 Tracker data remains on your device unless you choose to share it outside the app
 through your own device tools.
 
-## Optional Tips And Google Play Billing
+## Optional Tips And Store Billing
 
-Track Anything may offer optional one-time tips through Google Play Billing.
-Payments are processed by Google Play. Track Anything does not collect or store
-your payment card number, bank information, or Google account credentials.
+Track Anything may offer optional one-time tips through Google Play Billing on
+Android and Apple in-app purchases on iOS. Track Anything does not collect or
+store your payment card number, bank information, Google account credentials, or
+Apple account credentials.
 
-Google may process purchase and payment information under Google's own terms and
-privacy policy.
+Google or Apple may process purchase and payment information under their own
+terms and privacy policies.
 
 ## Permissions
 
-The Android app may include Internet access for the app runtime and Google Play
-Billing. Track Anything does not use this permission to upload tracker entries to
-developer servers.
+The Android and iOS apps may include Internet access for the app runtime and
+store billing. Track Anything does not use this permission to upload tracker
+entries to developer servers.
 
-The app may include Google Play Billing permission to support optional tips.
+The Android app may include Google Play Billing permission to support optional
+tips.
 
 ## Retention And Deletion
 
@@ -99,8 +101,8 @@ your local data.
 
 ## Children
 
-Track Anything is not directed to children under 13. If this changes, this privacy
-policy and the Google Play disclosures will be updated.
+Track Anything is not directed to children under 13. If this changes, this
+privacy policy and store disclosures will be updated.
 
 ## Changes
 
@@ -109,6 +111,6 @@ Updates will be posted on this page with a new effective date.
 
 ## Contact
 
-Privacy questions can be sent through the developer contact shown on Google Play, or
-opened as an issue at
+Privacy questions can be sent through the developer contact shown on Google Play
+or the App Store, or opened as an issue at
 [github.com/PearceMullins/Track-Anything/issues](https://github.com/PearceMullins/Track-Anything/issues).

@@ -117,11 +117,10 @@ export class LocalTrackStore {
 
   save(): void {
     this.bustListCache();
-    if (this.persistHandler) {
-      this.persistHandler(this.payload);
-    } else if (this.autosave) {
+    if (this.autosave) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.payload));
     }
+    this.persistHandler?.(this.toPayload());
   }
 
   private bustListCache(): void {
@@ -202,6 +201,12 @@ export class LocalTrackStore {
     return result;
   }
 
+  hiddenValues(): string[] {
+    return [...new Set(this.payload.hidden_values.map((v) => canonicalValueText(v)).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b),
+    );
+  }
+
   dropdownNotes(): string[] {
     if (this.listCache.notes) return this.listCache.notes;
     const notes = new Set(this.usedNotes());
@@ -216,6 +221,12 @@ export class LocalTrackStore {
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     this.listCache.notes = result;
     return result;
+  }
+
+  hiddenNotes(): string[] {
+    return [...new Set(this.payload.hidden_notes.map((n) => canonicalNoteText(n)).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b),
+    );
   }
 
   renameName(oldName: string, newName: string): void {
@@ -299,6 +310,21 @@ export class LocalTrackStore {
     if (changed) this.save();
   }
 
+  restoreValues(values: string[]): void {
+    let changed = false;
+    for (const value of values) {
+      const normalized = normalizeValueText(value);
+      if (!normalized) continue;
+      this.payload.hidden_values = this.payload.hidden_values.filter((v) => v !== normalized);
+      this.payload.custom_values = [...new Set([...this.payload.custom_values, canonicalValueText(normalized)])];
+      changed = true;
+    }
+    if (changed) {
+      this.bustListCache();
+      this.save();
+    }
+  }
+
   renameNote(oldNote: string, newNote: string): void {
     const old = normalizeNoteText(oldNote);
     const neu = normalizeNoteText(newNote);
@@ -340,6 +366,21 @@ export class LocalTrackStore {
       changed = true;
     }
     if (changed) this.save();
+  }
+
+  restoreNotes(notes: string[]): void {
+    let changed = false;
+    for (const note of notes) {
+      const normalized = normalizeNoteText(note);
+      if (!normalized) continue;
+      this.payload.hidden_notes = this.payload.hidden_notes.filter((n) => n !== normalized);
+      this.payload.custom_notes = [...new Set([...this.payload.custom_notes, canonicalNoteText(normalized)])];
+      changed = true;
+    }
+    if (changed) {
+      this.bustListCache();
+      this.save();
+    }
   }
 
   historyPoints(exercise: string): { date: string; value: number }[] {

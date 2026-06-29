@@ -326,6 +326,48 @@ select {
   align-items: center;
 }
 
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+
+.segmented button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segmented button.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.history-field-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  color: var(--text);
+  cursor: pointer;
+}
+
 .rows-header {
   display: grid;
   grid-template-columns: 1fr 120px 72px;
@@ -821,6 +863,10 @@ tbody tr.selected {
   box-shadow: var(--shadow);
 }
 
+.modal-narrow {
+  max-width: 360px;
+}
+
 .modal h2 {
   margin: 0 0 16px;
   font-size: 1.1rem;
@@ -880,6 +926,27 @@ tbody tr.selected {
   border: 1px solid rgba(240, 113, 120, 0.35);
   color: var(--danger);
   font-size: 0.9rem;
+}
+
+.status-banner {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(109, 159, 255, 0.12);
+  border: 1px solid rgba(109, 159, 255, 0.35);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.data-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.file-picker {
+  display: none;
 }
 
 @media (max-width: 600px) {

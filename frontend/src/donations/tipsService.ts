@@ -19,7 +19,8 @@ function toTipProduct(product: Product): TipProduct {
 }
 
 export function isTipsAvailableOnDevice(): boolean {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+  const platform = Capacitor.getPlatform();
+  return Capacitor.isNativePlatform() && (platform === "android" || platform === "ios");
 }
 
 export async function checkTipsBilling(): Promise<boolean> {

@@ -8,10 +8,20 @@ This guide covers the Android release path for Track Anything.
 | --- | --- | --- |
 | `python main.py` | React UI plus Python API on desktop | No |
 | `dist/TrackAnything.exe` | Windows desktop executable | No |
-| `npm run mobile:build` | Capacitor Android app with on-device storage | Yes |
+| `npm run mobile:build:android` | Capacitor Android app with on-device storage | Yes |
 
 The Play Store build stores user-created tracker data on the device. It does
 not bundle the Python API server.
+
+## Current Requirements
+
+- Package name: `com.trackanything.app`
+- Minimum SDK: 23
+- Target SDK: 35
+- Google Play requires Android apps to target a recent API level. Keep
+  `android/variables.gradle` current before every release.
+
+Reference: <https://developer.android.com/google/play/requirements/target-sdk>
 
 ## Automated Tests
 
@@ -66,7 +76,7 @@ npm install
 cd frontend
 npm install
 cd ..
-npm run mobile:build
+npm run mobile:build:android
 npx cap open android
 ```
 

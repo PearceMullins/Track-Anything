@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Bootstrap } from "../types";
 import * as api from "../api";
+import { PermanentDeleteConfirm } from "./PermanentDeleteConfirm";
 
 interface DeleteAllModalProps {
   data: Bootstrap;
@@ -37,11 +38,6 @@ export function DeleteAllModal({ data, onClose, onDeleted }: DeleteAllModalProps
       setError("Check the confirmation box to continue.");
       return;
     }
-    const list = picked.join(", ");
-    const warning =
-      `WARNING: This permanently deletes ALL history entries for:\n\n${list}\n\n` +
-      `This cannot be undone. Continue?`;
-    if (!window.confirm(warning)) return;
 
     setDeleting(true);
     setError("");
@@ -89,14 +85,11 @@ export function DeleteAllModal({ data, onClose, onDeleted }: DeleteAllModalProps
                 </label>
               ))}
             </div>
-            <label className="confirm-row">
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-              />
-              I understand this will permanently delete all entries for the selected names.
-            </label>
+            <PermanentDeleteConfirm
+              label="I understand this will permanently delete all entries for the selected names."
+              checked={confirmed}
+              onChange={setConfirmed}
+            />
           </>
         )}
 

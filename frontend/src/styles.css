@@ -184,6 +184,19 @@ select {
   color: var(--text-muted);
 }
 
+.import-help p {
+  margin: 0 0 6px;
+}
+
+.import-help ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.import-help li + li {
+  margin-top: 4px;
+}
+
 .warning-text {
   color: var(--danger);
 }
@@ -196,6 +209,49 @@ select {
   font-size: 0.9rem;
   line-height: 1.4;
   cursor: pointer;
+}
+
+.action-menu {
+  position: relative;
+}
+
+.action-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.action-menu-item {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action-menu-item:hover {
+  background: var(--bg-elevated);
+}
+
+.action-menu-item-danger {
+  color: var(--danger);
+}
+
+.action-menu-item-danger:hover {
+  background: rgba(240, 113, 120, 0.1);
 }
 
 .modal-check-grid {
@@ -399,6 +455,10 @@ select {
   min-width: 0;
 }
 
+.suggestion-input--open {
+  z-index: 30;
+}
+
 .suggestion-input .input,
 .suggestion-input .textarea {
   width: 100%;
@@ -406,10 +466,11 @@ select {
 
 .suggestion-list {
   position: absolute;
-  top: calc(100% + 4px);
+  bottom: calc(100% + 4px);
+  top: auto;
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 1;
   margin: 0;
   padding: 0;
   list-style: none;

@@ -1,12 +1,14 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Bootstrap, EntryRecord, HistoryRow } from "../types";
-import * as api from "../api";
 import { EditEntryModal } from "./EditEntryModal";
+import { DeleteEntriesModal } from "./DeleteEntriesModal";
+import { HistoryManageMenu } from "./HistoryManageMenu";
 import { isoToDisplay } from "../dateFormat";
 import { loadUiSlice, saveUiSlice } from "../uiState";
 
 interface HistoryPanelProps {
   data: Bootstrap;
+  displayFocus?: { name: string; nonce: number } | null;
   onChange: (data: Bootstrap) => void;
   onDeleteAll: () => void;
 }
@@ -62,7 +64,7 @@ function loadSelectedIndices(profile: string): Set<number> {
   return new Set();
 }
 
-export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps) {
+export function HistoryPanel({ data, displayFocus, onChange, onDeleteAll }: HistoryPanelProps) {
   const profile = data.active_profile;
   const names = data.chart_names;
   const [displayNames, setDisplayNames] = useState<Set<string>>(() => {
@@ -72,6 +74,7 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
   });
   const [selected, setSelected] = useState<Set<number>>(() => loadSelectedIndices(profile));
   const [editing, setEditing] = useState<EntryRecord | null>(null);
+  const [deletingIndices, setDeletingIndices] = useState<number[] | null>(null);
   const [showValues, setShowValues] = useState(() => loadUiSlice(profile).historyShowValues ?? true);
   const [showNotes, setShowNotes] = useState(() => loadUiSlice(profile).historyShowNotes ?? true);
 
@@ -93,6 +96,15 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
       return next;
     });
   }, [names]);
+
+  useEffect(() => {
+    const name = displayFocus?.name;
+    if (!name || !names.includes(name)) return;
+    setDisplayNames((prev) => {
+      if (prev.has(name)) return prev;
+      return new Set([...prev, name]);
+    });
+  }, [displayFocus?.name, displayFocus?.nonce, names]);
 
   useEffect(() => {
     saveUiSlice(profile, { historySelectedIndices: [...selected] });
@@ -170,19 +182,12 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
     setEditing(entry);
   };
 
-  const deleteSelected = async () => {
+  const openDeleteSelected = () => {
     if (selectedList.length === 0) {
       alert("Select one or more entries to delete.");
       return;
     }
-    const count = selectedList.length;
-    const msg =
-      count === 1
-        ? "Delete the selected entry?"
-        : `Delete ${count} selected entries?`;
-    if (!window.confirm(msg)) return;
-    onChange(await api.deleteEntries(selectedList));
-    setSelected(new Set());
+    setDeletingIndices(selectedList);
   };
 
   return (
@@ -253,15 +258,12 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
             <button type="button" className="btn btn-ghost" onClick={clearSelection}>
               Clear selection
             </button>
-            <button type="button" className="btn btn-ghost" onClick={editSelected}>
-              Edit
-            </button>
-            <button type="button" className="btn btn-ghost btn-danger" onClick={deleteSelected}>
-              Delete{selectedList.length > 1 ? ` (${selectedList.length})` : ""}
-            </button>
-            <button type="button" className="btn btn-ghost btn-danger" onClick={onDeleteAll}>
-              Delete all
-            </button>
+            <HistoryManageMenu
+              selectedCount={selectedList.length}
+              onEdit={editSelected}
+              onDelete={openDeleteSelected}
+              onDeleteAll={onDeleteAll}
+            />
           </div>
         </div>
 
@@ -319,6 +321,19 @@ export function HistoryPanel({ data, onChange, onDeleteAll }: HistoryPanelProps)
             onSaved={(next) => {
               onChange(next);
               setEditing(null);
+            }}
+          />
+        )}
+
+        {deletingIndices && (
+          <DeleteEntriesModal
+            data={data}
+            indices={deletingIndices}
+            onClose={() => setDeletingIndices(null)}
+            onDeleted={(next) => {
+              onChange(next);
+              setSelected(new Set());
+              setDeletingIndices(null);
             }}
           />
         )}

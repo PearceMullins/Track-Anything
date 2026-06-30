@@ -63,24 +63,19 @@ def test_dropdown_notes_includes_used_notes(store: TrackStore):
     assert "Morning session" in store.dropdown_notes()
 
 
-def test_hide_and_restore_values_and_notes(store: TrackStore):
+def test_permanent_delete_values_and_notes(store: TrackStore):
     store.add(_sample_entry(value="42 widgets", notes="Morning session"))
 
     store.remove_values(["42 widgets"])
     assert "42 widgets" not in store.dropdown_values()
-    assert "42 widgets" in store.hidden_values()
+    assert len(store.entries) == 0
 
-    store.restore_values(["42 widgets"])
-    assert "42 widgets" in store.dropdown_values()
-    assert "42 widgets" not in store.hidden_values()
+    store.add(_sample_entry(value="42 widgets", notes="Morning session"))
 
     store.remove_notes(["Morning session"])
     assert "Morning session" not in store.dropdown_notes()
-    assert "Morning session" in store.hidden_notes()
-
-    store.restore_notes(["Morning session"])
-    assert "Morning session" in store.dropdown_notes()
-    assert "Morning session" not in store.hidden_notes()
+    assert len(store.entries) == 1
+    assert store.entries[0].notes == ""
 
 
 def test_history_points_one_per_entry(store: TrackStore):

@@ -245,22 +245,21 @@ class TrackStore:
         self.save()
 
     def remove_value(self, value: str) -> None:
-        value = normalize_value_text(value)
-        self._hidden_values.add(value)
-        self._custom_values.discard(value)
+        normalized = normalize_value_text(value)
+        if not normalized:
+            return
+        self._entries = [
+            entry
+            for entry in self._entries
+            if normalize_value_text(entry.value) != normalized
+        ]
+        self._hidden_values.add(normalized)
+        self._custom_values.discard(normalized)
         self.save()
 
     def remove_values(self, values: list[str]) -> None:
-        changed = False
         for value in values:
-            normalized = normalize_value_text(value)
-            if not normalized:
-                continue
-            self._hidden_values.add(normalized)
-            self._custom_values.discard(normalized)
-            changed = True
-        if changed:
-            self.save()
+            self.remove_value(value)
 
     def restore_values(self, values: list[str]) -> None:
         changed = False
@@ -323,22 +322,19 @@ class TrackStore:
         self.save()
 
     def remove_note(self, note: str) -> None:
-        note = normalize_note_text(note)
-        self._hidden_notes.add(note)
-        self._custom_notes.discard(note)
+        normalized = normalize_note_text(note)
+        if not normalized:
+            return
+        for entry in self._entries:
+            if normalize_note_text(entry.notes) == normalized:
+                entry.notes = ""
+        self._hidden_notes.add(normalized)
+        self._custom_notes.discard(normalized)
         self.save()
 
     def remove_notes(self, notes: list[str]) -> None:
-        changed = False
         for note in notes:
-            normalized = normalize_note_text(note)
-            if not normalized:
-                continue
-            self._hidden_notes.add(normalized)
-            self._custom_notes.discard(normalized)
-            changed = True
-        if changed:
-            self.save()
+            self.remove_note(note)
 
     def restore_notes(self, notes: list[str]) -> None:
         changed = False

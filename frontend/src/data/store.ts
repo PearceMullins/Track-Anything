@@ -293,21 +293,20 @@ export class LocalTrackStore {
 
   removeValue(value: string): void {
     const normalized = normalizeValueText(value);
+    if (!normalized) return;
+    this.payload.entries = this.payload.entries.filter(
+      (e) => normalizeValueText(e.value) !== normalized,
+    );
     this.payload.hidden_values = [...new Set([...this.payload.hidden_values, normalized])];
     this.payload.custom_values = this.payload.custom_values.filter((v) => v !== normalized);
+    this.bustListCache();
     this.save();
   }
 
   removeValues(values: string[]): void {
-    let changed = false;
     for (const value of values) {
-      const normalized = normalizeValueText(value);
-      if (!normalized) continue;
-      this.payload.hidden_values = [...new Set([...this.payload.hidden_values, normalized])];
-      this.payload.custom_values = this.payload.custom_values.filter((v) => v !== normalized);
-      changed = true;
+      this.removeValue(value);
     }
-    if (changed) this.save();
   }
 
   restoreValues(values: string[]): void {
@@ -351,21 +350,24 @@ export class LocalTrackStore {
 
   removeNote(note: string): void {
     const normalized = normalizeNoteText(note);
+    if (!normalized) return;
+    let entriesChanged = false;
+    for (const entry of this.payload.entries) {
+      if (normalizeNoteText(entry.notes) === normalized) {
+        entry.notes = "";
+        entriesChanged = true;
+      }
+    }
     this.payload.hidden_notes = [...new Set([...this.payload.hidden_notes, normalized])];
     this.payload.custom_notes = this.payload.custom_notes.filter((n) => n !== normalized);
+    if (entriesChanged) this.bustListCache();
     this.save();
   }
 
   removeNotes(notes: string[]): void {
-    let changed = false;
     for (const note of notes) {
-      const normalized = normalizeNoteText(note);
-      if (!normalized) continue;
-      this.payload.hidden_notes = [...new Set([...this.payload.hidden_notes, normalized])];
-      this.payload.custom_notes = this.payload.custom_notes.filter((n) => n !== normalized);
-      changed = true;
+      this.removeNote(note);
     }
-    if (changed) this.save();
   }
 
   restoreNotes(notes: string[]): void {

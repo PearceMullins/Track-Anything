@@ -74,28 +74,21 @@ def test_rename_name(client):
     assert res.json()["entries"][0]["exercise"] == "Push Ups"
 
 
-def test_hide_and_show_values_and_notes(client):
+def test_permanent_delete_values_and_notes(client):
     client.post("/api/entries", json=ENTRY_BODY)
 
     res = client.post("/api/values/remove-batch", json={"names": ["10 reps"]})
     assert res.status_code == 200
     assert "10 reps" not in res.json()["dropdown_values"]
-    assert "10 reps" in res.json()["hidden_values"]
+    assert len(res.json()["entries"]) == 0
 
-    res = client.post("/api/values/show-batch", json={"names": ["10 reps"]})
-    assert res.status_code == 200
-    assert "10 reps" in res.json()["dropdown_values"]
-    assert "10 reps" not in res.json()["hidden_values"]
+    client.post("/api/entries", json=ENTRY_BODY)
 
     res = client.post("/api/notes/remove-batch", json={"names": ["Morning session"]})
     assert res.status_code == 200
     assert "Morning session" not in res.json()["dropdown_notes"]
-    assert "Morning session" in res.json()["hidden_notes"]
-
-    res = client.post("/api/notes/show-batch", json={"names": ["Morning session"]})
-    assert res.status_code == 200
-    assert "Morning session" in res.json()["dropdown_notes"]
-    assert "Morning session" not in res.json()["hidden_notes"]
+    assert len(res.json()["entries"]) == 1
+    assert res.json()["entries"][0]["notes"] == ""
 
 
 def test_export_and_import_data(client):

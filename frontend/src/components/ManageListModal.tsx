@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Bootstrap } from "../types";
 import * as api from "../api";
+import { PermanentDeleteConfirm } from "./PermanentDeleteConfirm";
 
 export type ManageKind = "names" | "values" | "notes";
 
@@ -23,12 +24,6 @@ function itemsFor(kind: ManageKind, data: Bootstrap): string[] {
   return data.dropdown_notes;
 }
 
-function hiddenItemsFor(kind: ManageKind, data: Bootstrap): string[] {
-  if (kind === "values") return data.hidden_values;
-  if (kind === "notes") return data.hidden_notes;
-  return [];
-}
-
 function renameFn(kind: ManageKind) {
   if (kind === "names") return api.renameName;
   if (kind === "values") return api.renameValue;
@@ -41,37 +36,28 @@ async function removeBatch(kind: ManageKind, items: string[]): Promise<Bootstrap
   return api.removeNotes(items);
 }
 
-async function restoreBatch(kind: ManageKind, items: string[]): Promise<Bootstrap> {
-  if (kind === "values") return api.showValues(items);
-  if (kind === "notes") return api.showNotes(items);
-  throw new Error("Only values and notes can be shown.");
-}
-
-function deleteConfirmMessage(kind: ManageKind, count: number): string {
-  const n = count === 1 ? "this item" : `these ${count} items`;
+function deleteConfirmLabel(kind: ManageKind): string {
   if (kind === "names") {
-    return `Remove ${n} from the dropdown and delete all saved records for ${count === 1 ? "it" : "them"}?`;
+    return "I understand this will permanently delete all entries for the selected names.";
   }
   if (kind === "values") {
-    return `Hide ${n} from the values dropdown?`;
+    return "I understand this will permanently delete all entries with the selected values.";
   }
-  return `Hide ${n} from the notes dropdown? Saved entries keep their note text.`;
+  return "I understand this will permanently delete the selected note text from saved entries.";
 }
 
+const MANAGE_HINT =
+  "Use the checkboxes to select items. Edit renames one; delete permanently removes all selected.";
+
 export function ManageListModal({ kind, data, onClose, onChange }: ManageListModalProps) {
-  const visibleItems = itemsFor(kind, data);
-  const hiddenItems = hiddenItemsFor(kind, data);
-  const canShowHidden = kind === "values" || kind === "notes";
-  const [view, setView] = useState<"visible" | "hidden">("visible");
-  const items = view === "hidden" ? hiddenItems : visibleItems;
+  const items = itemsFor(kind, data);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
 
-  const switchView = (next: "visible" | "hidden") => {
-    setView(next);
-    setSelected(new Set());
-    setError("");
-  };
+  useEffect(() => {
+    setConfirmed(false);
+  }, [selected, kind]);
 
   const toggle = (item: string) => {
     setSelected((prev) => {
@@ -106,30 +92,20 @@ export function ManageListModal({ kind, data, onClose, onChange }: ManageListMod
 
   const remove = async () => {
     if (selectedList.length === 0) {
-      alert(`Select one or more items to ${kind === "names" ? "delete" : "hide"}.`);
+      alert("Select one or more items to delete.");
       return;
     }
-    if (!window.confirm(deleteConfirmMessage(kind, selectedList.length))) return;
+    if (!confirmed) {
+      setError("Check the confirmation box to continue.");
+      return;
+    }
     setError("");
     try {
       onChange(await removeBatch(kind, selectedList));
       setSelected(new Set());
+      setConfirmed(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Update failed.");
-    }
-  };
-
-  const restore = async () => {
-    if (selectedList.length === 0) {
-      alert("Select one or more items to show.");
-      return;
-    }
-    setError("");
-    try {
-      onChange(await restoreBatch(kind, selectedList));
-      setSelected(new Set());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Update failed.");
+      setError(e instanceof Error ? e.message : "Delete failed.");
     }
   };
 
@@ -139,39 +115,10 @@ export function ManageListModal({ kind, data, onClose, onChange }: ManageListMod
         <h2>{TITLES[kind]}</h2>
         {error && <div className="error-banner">{error}</div>}
 
-        {canShowHidden && (
-          <div className="segmented" role="tablist" aria-label={`${kind} visibility`}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === "visible"}
-              className={view === "visible" ? "active" : ""}
-              onClick={() => switchView("visible")}
-            >
-              Visible
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === "hidden"}
-              className={view === "hidden" ? "active" : ""}
-              onClick={() => switchView("hidden")}
-            >
-              Hidden ({hiddenItems.length})
-            </button>
-          </div>
-        )}
-
-        <p className="hint">
-          {view === "hidden"
-            ? "Select hidden items to show them again."
-            : kind === "names"
-              ? "Use the checkboxes to select items. Edit renames one; delete removes all selected."
-              : "Use the checkboxes to select items. Edit renames one; hide removes all selected from suggestions."}
-        </p>
+        <p className="hint">{MANAGE_HINT}</p>
 
         {items.length === 0 ? (
-          <p className="empty">{view === "hidden" ? `No hidden ${kind}.` : "No suggestions yet. Type in the form first."}</p>
+          <p className="empty">No suggestions yet. Type in the form first.</p>
         ) : (
           <>
             <div className="btn-row" style={{ marginBottom: "0.75rem" }}>
@@ -200,22 +147,21 @@ export function ManageListModal({ kind, data, onClose, onChange }: ManageListMod
           </>
         )}
 
+        {selectedList.length > 0 && (
+          <PermanentDeleteConfirm
+            label={deleteConfirmLabel(kind)}
+            checked={confirmed}
+            onChange={setConfirmed}
+          />
+        )}
+
         <div className="btn-row">
-          {view === "visible" ? (
-            <>
-              <button type="button" className="btn" onClick={rename}>
-                Edit
-              </button>
-              <button type="button" className="btn btn-danger" onClick={remove}>
-                {kind === "names" ? "Delete" : "Hide"}
-                {selectedList.length > 1 ? ` (${selectedList.length})` : ""}
-              </button>
-            </>
-          ) : (
-            <button type="button" className="btn" onClick={restore}>
-              Show{selectedList.length > 1 ? ` (${selectedList.length})` : ""}
-            </button>
-          )}
+          <button type="button" className="btn" onClick={rename}>
+            Edit
+          </button>
+          <button type="button" className="btn btn-danger" onClick={remove}>
+            Delete{selectedList.length > 1 ? ` (${selectedList.length})` : ""}
+          </button>
           <button type="button" className="btn btn-ghost" onClick={onClose} style={{ marginLeft: "auto" }}>
             Close
           </button>

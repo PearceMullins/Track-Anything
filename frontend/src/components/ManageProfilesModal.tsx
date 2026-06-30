@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Bootstrap } from "../types";
 import * as api from "../api";
+import { PermanentDeleteConfirm } from "./PermanentDeleteConfirm";
 
 interface ManageProfilesModalProps {
   data: Bootstrap;
@@ -11,7 +12,12 @@ interface ManageProfilesModalProps {
 export function ManageProfilesModal({ data, onClose, onChange }: ManageProfilesModalProps) {
   const items = data.dropdown_profiles;
   const [selected, setSelected] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setConfirmed(false);
+  }, [selected]);
 
   const rename = async () => {
     if (!selected) {
@@ -34,17 +40,15 @@ export function ManageProfilesModal({ data, onClose, onChange }: ManageProfilesM
       alert("Select a profile to delete.");
       return;
     }
-    if (
-      !window.confirm(
-        `Delete profile "${selected}" and all of its history, charts, and dropdown data?\n\nThis cannot be undone.`,
-      )
-    ) {
+    if (!confirmed) {
+      setError("Check the confirmation box to continue.");
       return;
     }
     setError("");
     try {
       onChange(await api.removeProfile(selected));
       setSelected(null);
+      setConfirmed(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed.");
     }
@@ -72,6 +76,14 @@ export function ManageProfilesModal({ data, onClose, onChange }: ManageProfilesM
               </li>
             ))}
           </ul>
+        )}
+
+        {selected && (
+          <PermanentDeleteConfirm
+            label={`I understand this will permanently delete profile "${selected}" and all of its history, charts, and dropdown data.`}
+            checked={confirmed}
+            onChange={setConfirmed}
+          />
         )}
 
         <div className="btn-row">

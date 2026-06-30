@@ -17,10 +17,12 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.6.6",
+    "@capacitor/app": "^7.1.2",
     "@capacitor/core": "^7.6.6",
     "@capacitor/filesystem": "^7.1.8",
     "@capacitor/ios": "^7.6.6",
     "@capacitor/share": "^7.0.4",
+    "@capawesome/capacitor-file-picker": "^7.2.0",
     "@capgo/native-purchases": "^7.16.2"
   },
   "devDependencies": {

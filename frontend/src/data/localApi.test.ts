@@ -6,8 +6,6 @@ import {
   localImportData,
   localRemoveNotes,
   localRemoveValues,
-  localShowNotes,
-  localShowValues,
   localSwitchProfile,
 } from "./localApi";
 
@@ -57,7 +55,7 @@ describe("local backup", () => {
     localStorage.clear();
   });
 
-  it("hides and shows values and notes", () => {
+  it("permanently deletes values and notes", () => {
     localCreateEntry({
       exercise: "Pushups",
       entry_date: "2026-06-11",
@@ -67,19 +65,19 @@ describe("local backup", () => {
 
     let data = localRemoveValues(["10 reps"]);
     expect(data.dropdown_values).not.toContain("10 reps");
-    expect(data.hidden_values).toContain("10 reps");
+    expect(data.entries).toHaveLength(0);
 
-    data = localShowValues(["10 reps"]);
-    expect(data.dropdown_values).toContain("10 reps");
-    expect(data.hidden_values).not.toContain("10 reps");
+    localCreateEntry({
+      exercise: "Pushups",
+      entry_date: "2026-06-11",
+      value: "10 reps",
+      notes: "Morning session",
+    });
 
     data = localRemoveNotes(["Morning session"]);
     expect(data.dropdown_notes).not.toContain("Morning session");
-    expect(data.hidden_notes).toContain("Morning session");
-
-    data = localShowNotes(["Morning session"]);
-    expect(data.dropdown_notes).toContain("Morning session");
-    expect(data.hidden_notes).not.toContain("Morning session");
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0].notes).toBe("");
   });
 
   it("exports and imports all profiles", () => {

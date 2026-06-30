@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Bootstrap } from "./types";
-import { fetchBootstrap } from "./api";
+import { fetchBootstrap, importAppData } from "./api";
 import { snapshotBootstrap } from "./snapshotBootstrap";
 import { EntryForm } from "./components/EntryForm";
 import { HistoryPanel } from "./components/HistoryPanel";
@@ -11,7 +11,12 @@ import { DeleteAllModal } from "./components/DeleteAllModal";
 import { ManageProfilesModal } from "./components/ManageProfilesModal";
 import { SupportModal } from "./components/SupportModal";
 import { DataToolsModal } from "./components/DataToolsModal";
-import { loadUiState, saveUiState, flushUiState, type AppTab } from "./uiState";
+import { loadUiState, saveUiState, flushUiState, importUiState, type AppTab } from "./uiState";
+import {
+  addNativeBackupImportListener,
+  getPendingNativeBackupImport,
+  type NativeBackupImport,
+} from "./data/backupFiles";
 
 export default function App() {
   const [tab, setTab] = useState<AppTab>(() => loadUiState().tab ?? "log");
@@ -22,9 +27,11 @@ export default function App() {
   const [deleteAll, setDeleteAll] = useState(false);
   const [chartsSnapshot, setChartsSnapshot] = useState<Bootstrap | null>(null);
   const [historyReady, setHistoryReady] = useState(false);
+  const [historyDisplayFocus, setHistoryDisplayFocus] = useState<{ name: string; nonce: number } | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [dataToolsOpen, setDataToolsOpen] = useState(false);
   const lastProfileRef = useRef<string | null>(null);
+  const handledNativeImportsRef = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +45,52 @@ export default function App() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const importNativeBackup = useCallback(async (incoming: NativeBackupImport) => {
+    if (handledNativeImportsRef.current.has(incoming.id)) return;
+    handledNativeImportsRef.current.add(incoming.id);
+
+    const ok = window.confirm(
+      `Import backup from ${incoming.file.name} and replace all current app data? This cannot be undone unless you exported current data first.`,
+    );
+    if (!ok) return;
+
+    try {
+      const backup = JSON.parse(await incoming.file.text()) as Record<string, unknown>;
+      const next = await importAppData(backup);
+      importUiState(backup.ui_state);
+      setData(next);
+      setTab(loadUiState().tab ?? "log");
+      setChartsSnapshot(null);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Import failed.");
+    }
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let handles: { remove: () => Promise<void> }[] = [];
+
+    addNativeBackupImportListener((incoming) => {
+      void importNativeBackup(incoming);
+    }).then((nextHandles) => {
+      if (disposed) {
+        nextHandles.forEach((handle) => void handle.remove());
+        return;
+      }
+      handles = nextHandles;
+    });
+
+    getPendingNativeBackupImport().then((incoming) => {
+      if (!disposed && incoming) void importNativeBackup(incoming);
+    });
+
+    return () => {
+      disposed = true;
+      handles.forEach((handle) => void handle.remove());
+    };
+  }, [importNativeBackup]);
 
   useEffect(() => {
     if (!data) {
@@ -72,6 +125,7 @@ export default function App() {
       } else {
         setChartsSnapshot(null);
       }
+      setHistoryDisplayFocus(null);
     }
   }, [data, tab]);
 
@@ -151,11 +205,22 @@ export default function App() {
 
       <div className="tab-panels">
         <div className="tab-panel" hidden={tab !== "log"}>
-          <EntryForm key={data.active_profile} data={data} onSaved={onChange} onManage={setManage} />
+          <EntryForm
+            key={data.active_profile}
+            data={data}
+            onSaved={(next, displayName) => {
+              if (displayName) {
+                setHistoryDisplayFocus((prev) => ({ name: displayName, nonce: (prev?.nonce ?? 0) + 1 }));
+              }
+              onChange(next);
+            }}
+            onManage={setManage}
+          />
           {historyReady ? (
             <HistoryPanel
               key={`history-${data.active_profile}`}
               data={data}
+              displayFocus={historyDisplayFocus}
               onChange={onChange}
               onDeleteAll={() => setDeleteAll(true)}
             />

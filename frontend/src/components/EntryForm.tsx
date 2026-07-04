@@ -9,7 +9,7 @@ import { clearEntryDraft, loadUiSlice, saveUiSlice, type EntryDraft } from "../u
 
 interface EntryFormProps {
   data: Bootstrap;
-  onSaved: (data: Bootstrap, displayName?: string) => void;
+  onSaved: (data: Bootstrap, focus?: { name: string; entryIndex: number }) => void;
   onManage: (kind: "names" | "values" | "notes") => void;
 }
 
@@ -114,8 +114,13 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
         value: value.trim(),
         notes,
       });
-      const added = result.entries.find((entry) => entry.index >= data.entries.length);
-      onSaved(result, added?.exercise ?? name.trim());
+      const prevIndices = new Set(data.entries.map((entry) => entry.index));
+      const added = result.entries.find((entry) => !prevIndices.has(entry.index));
+      if (added) {
+        onSaved(result, { name: added.exercise, entryIndex: added.index });
+      } else {
+        onSaved(result);
+      }
       reset();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed.");

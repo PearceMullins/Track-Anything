@@ -27,7 +27,11 @@ export default function App() {
   const [deleteAll, setDeleteAll] = useState(false);
   const [chartsSnapshot, setChartsSnapshot] = useState<Bootstrap | null>(null);
   const [historyReady, setHistoryReady] = useState(false);
-  const [historyDisplayFocus, setHistoryDisplayFocus] = useState<{ name: string; nonce: number } | null>(null);
+  const [historyDisplayFocus, setHistoryDisplayFocus] = useState<{
+    name: string;
+    entryIndex: number;
+    nonce: number;
+  } | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [dataToolsOpen, setDataToolsOpen] = useState(false);
   const lastProfileRef = useRef<string | null>(null);
@@ -208,9 +212,13 @@ export default function App() {
           <EntryForm
             key={data.active_profile}
             data={data}
-            onSaved={(next, displayName) => {
-              if (displayName) {
-                setHistoryDisplayFocus((prev) => ({ name: displayName, nonce: (prev?.nonce ?? 0) + 1 }));
+            onSaved={(next, focus) => {
+              if (focus && focus.entryIndex >= 0) {
+                setHistoryDisplayFocus((prev) => ({
+                  name: focus.name,
+                  entryIndex: focus.entryIndex,
+                  nonce: (prev?.nonce ?? 0) + 1,
+                }));
               }
               onChange(next);
             }}

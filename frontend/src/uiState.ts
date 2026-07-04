@@ -12,6 +12,7 @@ export interface ProfileUiSlice {
   /** ISO calendar day (YYYY-MM-DD) when entryDraft was last updated. */
   entryDraftDay?: string;
   chartSelected?: string[];
+  chartShowForecast?: boolean;
   historyDisplayNames?: string[];
   historyShowValues?: boolean;
   historyShowNotes?: boolean;

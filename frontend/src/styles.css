@@ -703,6 +703,72 @@ tbody tr.selected {
   color: var(--text-muted);
 }
 
+.forecast-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 12px;
+}
+
+.forecast-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.forecast-setting-input {
+  min-width: 120px;
+  max-width: 160px;
+}
+
+.forecast-setting-wide {
+  min-width: 200px;
+}
+
+.forecast-horizon-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.forecast-auto-check {
+  min-height: auto;
+}
+
+.chart-forecast-auto-hint {
+  margin: 0 0 8px;
+}
+
+.chart-legend-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.chart-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.chart-legend-actual {
+  background: #6d9fff;
+}
+
+.chart-legend-projected {
+  background: #a78bfa;
+}
+
 .total-calc-field {
   margin-bottom: 0;
 }

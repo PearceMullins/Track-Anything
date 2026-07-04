@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { Bootstrap, EntryRecord, HistoryRow } from "../types";
 import { EditEntryModal } from "./EditEntryModal";
 import { DeleteEntriesModal } from "./DeleteEntriesModal";
@@ -8,7 +8,7 @@ import { loadUiSlice, saveUiSlice } from "../uiState";
 
 interface HistoryPanelProps {
   data: Bootstrap;
-  displayFocus?: { name: string; nonce: number } | null;
+  displayFocus?: { name: string; entryIndex: number; nonce: number } | null;
   onChange: (data: Bootstrap) => void;
   onDeleteAll: () => void;
 }
@@ -86,11 +86,23 @@ export function HistoryPanel({ data, displayFocus, onChange, onDeleteAll }: Hist
     saveUiSlice(profile, { historyShowValues: showValues, historyShowNotes: showNotes });
   }, [profile, showValues, showNotes]);
 
+  const prevNamesRef = useRef<string[]>([]);
+
   useEffect(() => {
+    prevNamesRef.current = [];
+  }, [profile]);
+
+  useEffect(() => {
+    const prevNames = new Set(prevNamesRef.current);
+    prevNamesRef.current = names;
+
     setDisplayNames((prev) => {
-      const next = new Set<string>();
+      const next = new Set(prev);
       for (const n of names) {
-        if (prev.has(n)) next.add(n);
+        if (!prevNames.has(n)) next.add(n);
+      }
+      for (const n of [...next]) {
+        if (!names.includes(n)) next.delete(n);
       }
       if (next.size === 0 && names.length) names.forEach((n) => next.add(n));
       return next;
@@ -99,12 +111,33 @@ export function HistoryPanel({ data, displayFocus, onChange, onDeleteAll }: Hist
 
   useEffect(() => {
     const name = displayFocus?.name;
-    if (!name || !names.includes(name)) return;
-    setDisplayNames((prev) => {
-      if (prev.has(name)) return prev;
-      return new Set([...prev, name]);
+    const entryIndex = displayFocus?.entryIndex;
+    if (entryIndex == null || entryIndex < 0) return;
+
+    if (name && names.includes(name)) {
+      setDisplayNames((prev) => {
+        if (prev.has(name)) return prev;
+        return new Set([...prev, name]);
+      });
+    }
+
+    setSelected((prev) => {
+      if (prev.has(entryIndex)) return prev;
+      return new Set([...prev, entryIndex]);
     });
-  }, [displayFocus?.name, displayFocus?.nonce, names]);
+  }, [displayFocus?.name, displayFocus?.entryIndex, displayFocus?.nonce, names]);
+
+  useEffect(() => {
+    const visible = new Set(
+      data.history_rows
+        .filter((row) => displayNames.has(row.name))
+        .map((row) => row.entry_index),
+    );
+    setSelected((prev) => {
+      const next = new Set([...prev].filter((i) => visible.has(i)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [displayNames]);
 
   useEffect(() => {
     saveUiSlice(profile, { historySelectedIndices: [...selected] });
@@ -134,14 +167,6 @@ export function HistoryPanel({ data, displayFocus, onChange, onDeleteAll }: Hist
     () => data.history_rows.filter((row) => displayNames.has(row.name)),
     [data.history_rows, displayNames],
   );
-
-  useEffect(() => {
-    const visible = new Set(visibleRows.map((row) => row.entry_index));
-    setSelected((prev) => {
-      const next = new Set([...prev].filter((i) => visible.has(i)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [visibleRows]);
 
   const toggleSelect = (entryIndex: number) => {
     setSelected((prev) => {

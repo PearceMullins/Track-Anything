@@ -38,3 +38,7 @@ export interface ChartPointDetail {
 }
 
 export interface ChartPoint extends ChartPointDetail {}
+
+export interface ChartSeriesPoint extends ChartPointDetail {
+  isProjected?: boolean;
+}

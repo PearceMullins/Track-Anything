@@ -35,6 +35,17 @@
 
 ---
 
+## Closed Alpha Testing
+
+Help test the app! Join here:
+
+- [Join on Web](https://play.google.com/apps/testing/com.trackanything.app)
+- [Join on Android](https://play.google.com/store/apps/details?id=com.trackanything.app)
+
+Please stay opted in for at least 14 days to help us meet Google's requirements.
+
+Thank you!
+
 Track Anything is a lightweight tracker for anything you want to measure. Create
 profiles, name what you are tracking, add labeled values, review history, and
 view charts — all without an account.

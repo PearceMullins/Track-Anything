@@ -6,6 +6,8 @@ import {
   localImportData,
   localRemoveNotes,
   localRemoveValues,
+  localSetDefaultValueFormula,
+  localSetValueFormula,
   localSwitchProfile,
 } from "./localApi";
 
@@ -101,5 +103,47 @@ describe("local backup", () => {
     expect(imported.entries[0].exercise).toBe("Walking");
     localSwitchProfile("Default");
     expect(localFetchBootstrap().entries[0].exercise).toBe("Pushups");
+  });
+
+  it("persists value_formulas and applies to numeric_value", () => {
+    localCreateEntry({
+      exercise: "Pushups",
+      entry_date: "2026-06-11",
+      value: "2 sets of 10",
+    });
+    let data = localFetchBootstrap();
+    expect(data.value_formulas.default).toBe("first_number");
+    expect(data.entries[0].numeric_value).toBe(2);
+
+    data = localSetValueFormula("Pushups", "sum_numbers");
+    expect(data.value_formulas.by_name.Pushups).toBe("sum_numbers");
+    expect(data.entries[0].numeric_value).toBe(12);
+
+    const raw = localStorage.getItem("track_anything_p:Default");
+    expect(raw).toContain("sum_numbers");
+  });
+
+  it("applies a default equation to every name", () => {
+    localCreateEntry({
+      exercise: "Pushups",
+      entry_date: "2026-06-11",
+      value: "2 sets of 10",
+    });
+    localCreateEntry({
+      exercise: "Situps",
+      entry_date: "2026-06-11",
+      value: "4 sets of 10",
+    });
+
+    let data = localSetDefaultValueFormula({ expr: "a * b" });
+    expect(data.value_formulas.default).toEqual({ expr: "a * b" });
+    expect(data.entries.map((e) => e.numeric_value)).toEqual([20, 40]);
+
+    data = localSetValueFormula("Situps", "sum_numbers");
+    expect(data.entries.map((e) => e.numeric_value)).toEqual([20, 14]);
+
+    data = localSetDefaultValueFormula("sum_numbers");
+    expect(data.value_formulas.by_name.Situps).toBeUndefined();
+    expect(data.entries.map((e) => e.numeric_value)).toEqual([12, 14]);
   });
 });

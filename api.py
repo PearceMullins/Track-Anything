@@ -9,7 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from models import TrackEntry, logged_at_for_entry_date, normalize_exercise_name, normalize_value_text
+from models import (
+    TrackEntry,
+    logged_at_for_entry_date,
+    normalize_exercise_name,
+    normalize_value_text,
+    formula_for_name,
+    resolve_numeric_value,
+    is_formula_spec,
+)
 from profile_manager import ProfileManager
 
 profiles = ProfileManager()
@@ -61,15 +69,25 @@ class ProfileNameInput(BaseModel):
     name: str
 
 
+class ValueFormulaInput(BaseModel):
+    name: str
+    formula: str | dict = "first_number"
+
+
+class DefaultValueFormulaInput(BaseModel):
+    formula: str | dict = "first_number"
+
+
 def _store():
     return profiles.store
 
 
 def _serialize_entry(index: int, entry: TrackEntry) -> dict:
+    formula = formula_for_name(_store().value_formulas(), entry.exercise)
     return {
         "index": index,
         **entry.to_dict(),
-        "numeric_value": entry.numeric_value,
+        "numeric_value": resolve_numeric_value(entry.value, formula),
     }
 
 
@@ -101,6 +119,7 @@ def _bootstrap() -> dict:
         "chart_names": store.exercise_names(),
         "active_profile": profiles.active_profile,
         "dropdown_profiles": profiles.dropdown_profiles(),
+        "value_formulas": store.value_formulas(),
     }
 
 
@@ -126,6 +145,25 @@ def _entry_from_input(data: EntryInput) -> TrackEntry:
 
 @app.get("/api/bootstrap")
 def get_bootstrap() -> dict:
+    return _bootstrap()
+
+
+@app.post("/api/value-formulas")
+def set_value_formula(body: ValueFormulaInput) -> dict:
+    if not is_formula_spec(body.formula):
+        raise HTTPException(400, "Invalid formula.")
+    try:
+        _store().set_value_formula(body.name, body.formula)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _bootstrap()
+
+
+@app.post("/api/value-formulas/default")
+def set_default_value_formula(body: DefaultValueFormulaInput) -> dict:
+    if not is_formula_spec(body.formula):
+        raise HTTPException(400, "Invalid formula.")
+    _store().set_default_value_formula(body.formula)
     return _bootstrap()
 
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { chartDataKey, chartPointsForExercise } from "./chartData";
 import { parseNumericValue } from "./data/models";
 import type { EntryRecord } from "./types";
+import { emptyValueFormulas, setFormulaForName } from "./data/valueFormulas";
 
 function entry(
   index: number,
@@ -46,5 +47,13 @@ describe("chartData", () => {
     const before = [entry(0, "Pushups", "2026-06-11", "10 reps")];
     const after = [entry(0, "Pushups", "2026-06-11", "20 reps")];
     expect(chartDataKey(before, "Pushups")).not.toBe(chartDataKey(after, "Pushups"));
+  });
+
+  it("applies per-name value formula", () => {
+    const entries = [entry(0, "Pushups", "2026-06-11", "2 sets of 10")];
+    let formulas = emptyValueFormulas();
+    formulas = setFormulaForName(formulas, "Pushups", "sum_numbers");
+    const points = chartPointsForExercise(entries, "Pushups", formulas);
+    expect(points[0].value).toBe(12);
   });
 });

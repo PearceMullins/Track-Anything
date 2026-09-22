@@ -1,5 +1,7 @@
 /** Client-side data models mirroring models.py for offline / Android builds. */
 
+import { resolveNumericValue, type FormulaSpec } from "./valueFormulas";
+
 export const NAME_SUGGESTIONS = [
   "Calories",
   "Body Weight",
@@ -64,11 +66,15 @@ export function canonicalValueText(value: string): string {
 }
 
 export function parseNumericValue(text: string): number {
-  const match = text.match(/[-+]?\d*\.?\d+/);
-  if (!match) return 0;
-  const n = Number(match[0]);
-  return Number.isFinite(n) ? n : 0;
+  return resolveNumericValue(text, "first_number");
 }
+
+export {
+  resolveNumericValue,
+  formulaForName,
+  type FormulaSpec,
+  type ValueFormulasConfig,
+} from "./valueFormulas";
 
 function coerceValueText(raw: unknown, unit: string): string {
   if (typeof raw === "string") return normalizeValueText(raw);
@@ -128,8 +134,8 @@ export function entryFromDict(data: Record<string, unknown>): TrackEntry {
   };
 }
 
-export function entryNumericValue(entry: TrackEntry): number {
-  return parseNumericValue(entry.value);
+export function entryNumericValue(entry: TrackEntry, formula: FormulaSpec = "first_number"): number {
+  return resolveNumericValue(entry.value, formula);
 }
 
 export function todayIso(): string {

@@ -812,10 +812,177 @@ tbody tr.selected {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.formula-builder {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+}
+
+.formula-builder-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.formula-builder-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.formula-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.formula-stepper .btn {
+  min-width: 30px;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+
+.formula-stepper-value {
+  min-width: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.formula-all-ops {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.formula-all-ops select {
+  max-width: 170px;
+  padding: 4px 8px;
+}
+
+.formula-op-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.formula-term {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.formula-var-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.formula-op-select {
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.formula-number-input {
+  width: 84px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.formula-advanced {
+  margin-top: 10px;
+}
+
+.formula-advanced > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.formula-advanced[open] > summary {
+  margin-bottom: 6px;
+}
+
+.formula-equation {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.formula-hint {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.formula-numbers {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+
 .formula-preview {
   margin: 10px 0 0;
   font-size: 0.85rem;
   color: var(--accent);
+}
+
+.formula-actions {
+  margin-top: 10px;
+}
+
+.entry-formula-preview {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--accent);
+  word-break: break-word;
+}
+
+.entry-formula-preview strong {
+  font-size: 1rem;
+}
+
+.entry-formula-preview.muted {
+  color: var(--text-muted);
+}
+
+.chart-formula-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+}
+
+.chart-formula-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .formula-error {

@@ -222,6 +222,7 @@ export default function App() {
               }
               onChange(next);
             }}
+            onChange={onChange}
             onManage={setManage}
           />
           {historyReady ? (
@@ -248,7 +249,8 @@ export default function App() {
       </div>
 
       <footer className="footer">
-        Each entry has a name and value. Notes are optional and appear on chart points.
+        Each entry has a name and the numbers for its equation. Notes are optional and appear on
+        chart points.
       </footer>
 
       {supportOpen && <SupportModal onClose={() => setSupportOpen(false)} />}

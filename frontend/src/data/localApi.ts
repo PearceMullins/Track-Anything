@@ -4,6 +4,7 @@ import type { Bootstrap, ChartPoint } from "../types";
 import { chartPointsForExercise } from "../chartData";
 import { buildBootstrap, entryFromInput, type EntryInput } from "./bootstrap";
 import { getProfileManager, type AppDataExport } from "./profileManager";
+import type { FormulaSpec } from "./valueFormulas";
 
 function bootstrap(): Bootstrap {
   const pm = getProfileManager();
@@ -55,7 +56,7 @@ export function localDeleteEntries(indices: number[]): Bootstrap {
 
 export function localFetchChart(name: string): { name: string; points: ChartPoint[] } {
   const data = bootstrap();
-  return { name, points: chartPointsForExercise(data.entries, name) };
+  return { name, points: chartPointsForExercise(data.entries, name, data.value_formulas) };
 }
 
 export function localRenameName(oldValue: string, newValue: string): Bootstrap {
@@ -125,5 +126,15 @@ export function localRemoveNotes(names: string[]): Bootstrap {
 
 export function localShowNotes(names: string[]): Bootstrap {
   getProfileManager().trackStore.restoreNotes(names);
+  return bootstrap();
+}
+
+export function localSetValueFormula(name: string, formula: FormulaSpec): Bootstrap {
+  getProfileManager().trackStore.setValueFormula(name, formula);
+  return bootstrap();
+}
+
+export function localSetDefaultValueFormula(formula: FormulaSpec): Bootstrap {
+  getProfileManager().trackStore.setDefaultValueFormula(formula);
   return bootstrap();
 }

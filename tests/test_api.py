@@ -64,6 +64,30 @@ def test_chart_points(client):
     assert points[0]["value"] == 10.0
 
 
+def test_set_value_formula_endpoint(client):
+    client.post("/api/entries", json={**ENTRY_BODY, "value": "2 sets of 10"})
+
+    res = client.post("/api/value-formulas", json={"name": "Pushups", "formula": "sum_numbers"})
+    assert res.status_code == 200
+    assert res.json()["value_formulas"]["by_name"]["Pushups"] == "sum_numbers"
+    assert res.json()["entries"][0]["numeric_value"] == 12.0
+
+    invalid = client.post("/api/value-formulas", json={"name": "Pushups", "formula": "nope"})
+    assert invalid.status_code == 400
+
+
+def test_set_default_value_formula_endpoint(client):
+    client.post("/api/entries", json={**ENTRY_BODY, "value": "2 sets of 10"})
+
+    res = client.post("/api/value-formulas/default", json={"formula": {"expr": "a * b"}})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["value_formulas"]["default"] == {"expr": "a * b"}
+    assert data["entries"][0]["numeric_value"] == 20.0
+
+    assert client.post("/api/value-formulas/default", json={"formula": 7}).status_code == 422
+
+
 def test_rename_name(client):
     client.post("/api/entries", json=ENTRY_BODY)
     res = client.post(

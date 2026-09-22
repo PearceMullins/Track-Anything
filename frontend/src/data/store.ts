@@ -11,8 +11,19 @@ import {
   normalizeNoteText,
   canonicalValueText,
   canonicalNoteText,
-  parseNumericValue,
 } from "./models";
+import {
+  emptyValueFormulas,
+  formulaForName,
+  normalizeValueFormulas,
+  removeFormulaName,
+  renameFormulaName,
+  resolveNumericValue,
+  setFormulaForName,
+  setDefaultFormula,
+  type FormulaSpec,
+  type ValueFormulasConfig,
+} from "./valueFormulas";
 
 const STORAGE_KEY = "track_anything_data";
 
@@ -24,6 +35,7 @@ export interface PersistedPayload {
   custom_values: string[];
   hidden_notes: string[];
   custom_notes: string[];
+  value_formulas: ValueFormulasConfig;
 }
 
 export function emptyPayload(): PersistedPayload {
@@ -35,6 +47,7 @@ export function emptyPayload(): PersistedPayload {
     custom_values: [],
     hidden_notes: [],
     custom_notes: [],
+    value_formulas: emptyValueFormulas(),
   };
 }
 
@@ -111,6 +124,7 @@ export class LocalTrackStore {
       custom_notes: (parsed.custom_notes ?? []).map((n) =>
         canonicalNoteText(normalizeNoteText(n)),
       ),
+      value_formulas: normalizeValueFormulas(parsed.value_formulas),
     };
     return this.backfillLoggedAt();
   }
@@ -250,6 +264,7 @@ export class LocalTrackStore {
     } else {
       this.payload.custom_names = this.payload.custom_names.filter((n) => n !== neu);
     }
+    this.payload.value_formulas = renameFormulaName(this.payload.value_formulas, old, neu);
     this.save();
   }
 
@@ -258,6 +273,7 @@ export class LocalTrackStore {
     this.payload.entries = this.payload.entries.filter((e) => e.exercise !== normalized);
     this.payload.hidden_names = [...new Set([...this.payload.hidden_names, normalized])];
     this.payload.custom_names = this.payload.custom_names.filter((n) => n !== normalized);
+    this.payload.value_formulas = removeFormulaName(this.payload.value_formulas, normalized);
     this.save();
   }
 
@@ -386,6 +402,7 @@ export class LocalTrackStore {
   }
 
   historyPoints(exercise: string): { date: string; value: number }[] {
+    const formula = formulaForName(this.payload.value_formulas, exercise);
     const entries = this.payload.entries
       .filter((e) => e.exercise === exercise)
       .sort((a, b) => {
@@ -397,8 +414,33 @@ export class LocalTrackStore {
       const idx = sameDay[entry.entry_date] ?? 0;
       sameDay[entry.entry_date] = idx + 1;
       const when = chartDatetime(entry.entry_date, idx);
-      return { date: when.toISOString(), value: parseNumericValue(entry.value) };
+      return { date: when.toISOString(), value: resolveNumericValue(entry.value, formula) };
     });
+  }
+
+  get valueFormulas(): ValueFormulasConfig {
+    return this.payload.value_formulas;
+  }
+
+  setValueFormula(name: string, spec: FormulaSpec): void {
+    const normalized = normalizeExerciseName(name);
+    if (!normalized) throw new Error("Name cannot be empty.");
+    this.payload.value_formulas = setFormulaForName(
+      this.payload.value_formulas,
+      normalized,
+      spec,
+    );
+    this.save();
+  }
+
+  setDefaultValueFormula(spec: FormulaSpec): void {
+    this.payload.value_formulas = setDefaultFormula(this.payload.value_formulas, spec);
+    this.save();
+  }
+
+  setValueFormulas(config: ValueFormulasConfig): void {
+    this.payload.value_formulas = normalizeValueFormulas(config);
+    this.save();
   }
 
   private rememberEntryLists(entry: TrackEntry): void {

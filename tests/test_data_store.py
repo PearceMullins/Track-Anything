@@ -1,5 +1,7 @@
 """Tests for data_store.TrackStore."""
 
+import pytest
+
 from models import TrackEntry
 from data_store import TrackStore
 
@@ -85,3 +87,38 @@ def test_history_points_one_per_entry(store: TrackStore):
     assert len(points) == 2
     assert points[0][1] == 3.0
     assert points[1][1] == 4.0
+
+
+def test_value_formulas_persist_and_affect_history(store: TrackStore, data_path):
+    store.add(_sample_entry("Pushups", "2 sets of 10"))
+    assert store.value_formulas()["default"] == "first_number"
+    assert store.history_points("Pushups")[0][1] == 2.0
+
+    store.set_value_formula("Pushups", "sum_numbers")
+    assert store.value_formulas()["by_name"]["Pushups"] == "sum_numbers"
+    assert store.history_points("Pushups")[0][1] == 12.0
+
+    reloaded = TrackStore(data_path)
+    assert reloaded.value_formulas()["by_name"]["Pushups"] == "sum_numbers"
+    assert reloaded.history_points("Pushups")[0][1] == 12.0
+
+
+def test_default_value_formula_applies_to_every_name(store: TrackStore, data_path):
+    store.add(_sample_entry("Pushups", "2 sets of 10"))
+    store.add(_sample_entry("Situps", "4 sets of 10"))
+
+    store.set_default_value_formula({"expr": "a * b"})
+    assert store.value_formulas()["default"] == {"expr": "a * b"}
+    assert store.history_points("Pushups")[0][1] == 20.0
+    assert store.history_points("Situps")[0][1] == 40.0
+
+    store.set_value_formula("Situps", "sum_numbers")
+    assert store.value_formulas()["by_name"]["Situps"] == "sum_numbers"
+    assert store.history_points("Situps")[0][1] == 14.0
+
+    store.set_default_value_formula("sum_numbers")
+    assert "Situps" not in store.value_formulas()["by_name"]
+    assert TrackStore(data_path).value_formulas()["default"] == "sum_numbers"
+
+    with pytest.raises(ValueError):
+        store.set_default_value_formula("not_a_formula")

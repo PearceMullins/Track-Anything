@@ -1,3 +1,5 @@
+import type { ValueFormulasConfig } from "./data/valueFormulas";
+
 export interface EntryRecord {
   index: number;
   exercise: string;
@@ -27,6 +29,7 @@ export interface Bootstrap {
   chart_names: string[];
   active_profile: string;
   dropdown_profiles: string[];
+  value_formulas: ValueFormulasConfig;
 }
 
 export interface ChartPointDetail {

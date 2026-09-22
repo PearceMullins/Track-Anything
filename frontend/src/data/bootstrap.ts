@@ -9,6 +9,7 @@ import {
   normalizeValueText,
 } from "./models";
 import { LocalTrackStore } from "./store";
+import { formulaForName } from "./valueFormulas";
 
 export interface EntryInput {
   exercise: string;
@@ -25,12 +26,13 @@ export function buildBootstrap(
   dropdownProfiles: string[],
 ): Bootstrap {
   const rawEntries = store.entries;
+  const formulas = store.valueFormulas;
   const entries = new Array(rawEntries.length);
   const history_rows = new Array(rawEntries.length);
 
   for (let index = 0; index < rawEntries.length; index++) {
     const entry = rawEntries[index];
-    const numeric_value = entryNumericValue(entry);
+    const numeric_value = entryNumericValue(entry, formulaForName(formulas, entry.exercise));
     entries[index] = {
       index,
       ...entry,
@@ -56,6 +58,7 @@ export function buildBootstrap(
     chart_names: store.exerciseNames(),
     active_profile: activeProfile,
     dropdown_profiles: dropdownProfiles,
+    value_formulas: formulas,
   };
 }
 

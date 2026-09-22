@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from typing import Callable
+from typing import Any, Callable
 
 from models import (
     NAME_SUGGESTIONS,
@@ -16,6 +16,15 @@ from models import (
     normalize_note_text,
     canonical_value_text,
     canonical_note_text,
+    empty_value_formulas,
+    normalize_value_formulas,
+    formula_for_name,
+    resolve_numeric_value,
+    set_formula_for_name,
+    set_default_formula,
+    rename_formula_name,
+    remove_formula_name,
+    is_formula_spec,
 )
 from paths import data_file
 
@@ -31,6 +40,7 @@ def empty_store_payload() -> dict:
         "custom_values": [],
         "hidden_notes": [],
         "custom_notes": [],
+        "value_formulas": empty_value_formulas(),
     }
 
 
@@ -45,6 +55,7 @@ class TrackStore:
         self._custom_values: set[str] = set()
         self._hidden_notes: set[str] = set()
         self._custom_notes: set[str] = set()
+        self._value_formulas: dict = empty_value_formulas()
         if self.path is not None:
             self.load()
 
@@ -70,6 +81,7 @@ class TrackStore:
         self._custom_values = set()
         self._hidden_notes = set()
         self._custom_notes = set()
+        self._value_formulas = empty_value_formulas()
 
     def to_payload(self) -> dict:
         return {
@@ -80,6 +92,7 @@ class TrackStore:
             "custom_values": sorted(self._custom_values, key=str.lower),
             "hidden_notes": sorted(self._hidden_notes, key=str.lower),
             "custom_notes": sorted(self._custom_notes, key=str.lower),
+            "value_formulas": normalize_value_formulas(self._value_formulas),
         }
 
     def load_from_payload(self, raw: dict) -> None:
@@ -90,6 +103,7 @@ class TrackStore:
         self._custom_values = {normalize_value_text(v) for v in raw.get("custom_values", [])}
         self._hidden_notes = {normalize_note_text(n) for n in raw.get("hidden_notes", [])}
         self._custom_notes = {normalize_note_text(n) for n in raw.get("custom_notes", [])}
+        self._value_formulas = normalize_value_formulas(raw.get("value_formulas"))
         self._backfill_logged_at()
         if self._canonicalize_custom_lists():
             self.save()
@@ -177,6 +191,7 @@ class TrackStore:
         else:
             self._custom_names.discard(new)
 
+        self._value_formulas = rename_formula_name(self._value_formulas, old, new)
         self.save()
 
     def remove_name(self, name: str) -> int:
@@ -187,6 +202,7 @@ class TrackStore:
 
         self._hidden_names.add(name)
         self._custom_names.discard(name)
+        self._value_formulas = remove_formula_name(self._value_formulas, name)
         self.save()
         return deleted
 
@@ -353,6 +369,7 @@ class TrackStore:
 
     def history_points(self, exercise: str) -> list[tuple[datetime, float]]:
         """Each logged entry is one chart point, positioned on its entry date."""
+        formula = formula_for_name(self._value_formulas, exercise)
         entries = self.entries_for_exercise(exercise)
         entries.sort(key=lambda e: (e.entry_date, e.logged_at or ""))
 
@@ -362,8 +379,27 @@ class TrackStore:
             idx = same_day.get(entry.entry_date, 0)
             same_day[entry.entry_date] = idx + 1
             when = self._chart_datetime(entry.entry_date, idx)
-            points.append((when, entry.numeric_value))
+            points.append((when, resolve_numeric_value(entry.value, formula)))
         return points
+
+    def value_formulas(self) -> dict:
+        return normalize_value_formulas(self._value_formulas)
+
+    def set_value_formula(self, name: str, formula: Any) -> None:
+        normalized = normalize_exercise_name(name)
+        if not normalized:
+            raise ValueError("Name cannot be empty.")
+        if not is_formula_spec(formula):
+            raise ValueError("Invalid formula.")
+        self._value_formulas = set_formula_for_name(self._value_formulas, normalized, formula)
+        self.save()
+
+    def set_default_value_formula(self, formula: Any) -> None:
+        """Fallback formula for every name without its own override."""
+        if not is_formula_spec(formula):
+            raise ValueError("Invalid formula.")
+        self._value_formulas = set_default_formula(self._value_formulas, formula)
+        self.save()
 
     @staticmethod
     def _chart_datetime(entry_date: str, same_day_index: int = 0) -> datetime:

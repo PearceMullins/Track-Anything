@@ -68,9 +68,15 @@ saved to `track_anything_data.json` next to the app.
 ## Features
 
 - **Profiles** — separate tracking spaces (work, home, hobbies, and more)
-- **Flexible entries** — custom names, labels, values, and notes per log
+- **Flexible entries** — custom names, notes, and any number of inputs per log
 - **History** — edit, delete, and review past entries
 - **Charts** — progress over time for any tracked name
+- **Custom equations** — the log form *is* the equation: choose an operator (add,
+  subtract, multiply, divide, power, remainder), choose how many inputs you want, and
+  type the numbers. The saved entry shows the expression (`3 × 10 × 50`) and charts the
+  result. Need something the operator chain cannot express? The **Advanced** panel
+  offers quick picks (first, last, sum, product, largest, smallest number) and custom
+  expressions with parentheses and functions (`avg`, `min`, `max`, `round`, `sqrt`, …)
 - **Local-first** — data stays on your device; no login required
 - **Android and iOS builds** — Capacitor apps with on-device storage
 - **Optional tips** — Google Play donations only; no locked features
@@ -114,6 +120,21 @@ python main.py
 ```
 
 Opens `http://127.0.0.1:8000` with the built UI and API.
+
+### One-click launcher (Windows)
+
+After cloning, just run the launcher — it installs what is missing, rebuilds the UI
+whenever the source is newer than the build, starts the server, and opens your browser:
+
+```bat
+run.bat            :: run the app at http://127.0.0.1:8000 (rebuilds if needed)
+run.bat rebuild    :: force a UI rebuild first
+run.bat dev        :: API + hot-reload dev server in two windows
+```
+
+You can also double-click `run.bat` in File Explorer. It serves the built UI, so after
+a UI change just refresh the browser tab; after a Python/API change, close the window
+and start `run.bat` again.
 
 ## Build Windows executable
 

@@ -161,3 +161,24 @@ export function removeProfile(name: string): Promise<Bootstrap> {
   if (isLocalMode()) return runLocal(() => local.localRemoveProfile(name));
   return request("/profiles/remove", { method: "POST", body: JSON.stringify({ name }) });
 }
+
+export function setValueFormula(
+  name: string,
+  formula: import("./data/valueFormulas").FormulaSpec,
+): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localSetValueFormula(name, formula));
+  return request("/value-formulas", {
+    method: "POST",
+    body: JSON.stringify({ name, formula }),
+  });
+}
+
+export function setDefaultValueFormula(
+  formula: import("./data/valueFormulas").FormulaSpec,
+): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localSetDefaultValueFormula(formula));
+  return request("/value-formulas/default", {
+    method: "POST",
+    body: JSON.stringify({ formula }),
+  });
+}

@@ -6,10 +6,33 @@ import { DateInput } from "./DateInput";
 import { SuggestionInput } from "./SuggestionInput";
 import { displayToIso, resolveEntryDraftDate, todayDisplay, todayIso } from "../dateFormat";
 import { clearEntryDraft, loadUiSlice, saveUiSlice, type EntryDraft } from "../uiState";
+import { normalizeExerciseName } from "../data/models";
+import {
+  CHAIN_OPERATORS,
+  MAX_CHAIN_INPUTS,
+  MIN_CHAIN_INPUTS,
+  OPERATOR_LABELS,
+  OPERATOR_SYMBOLS,
+  buildChainExpr,
+  chainOpAt,
+  clampInputCount,
+  emptyValueFormulas,
+  explainFormula,
+  formulaForName,
+  formulaLabel,
+  formulaSpecsEqual,
+  parseChainExpr,
+  resolveNumericValue,
+  variableName,
+  type ChainOperator,
+  type FormulaSpec,
+} from "../data/valueFormulas";
+import { ValueFormulaEditor } from "./ValueFormulaEditor";
 
 interface EntryFormProps {
   data: Bootstrap;
   onSaved: (data: Bootstrap, focus?: { name: string; entryIndex: number }) => void;
+  onChange: (data: Bootstrap) => void;
   onManage: (kind: "names" | "values" | "notes") => void;
 }
 
@@ -33,30 +56,63 @@ function freshDraft(): EntryDraft {
   };
 }
 
-export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
+function emptyInputs(count: number): string[] {
+  return Array.from({ length: count }, () => "");
+}
+
+export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps) {
   const profile = data.active_profile;
   const dropdownNames = useMemo(() => data.dropdown_names, [data.dropdown_names]);
-  const dropdownValues = useMemo(() => data.dropdown_values, [data.dropdown_values]);
   const dropdownNotes = useMemo(() => data.dropdown_notes, [data.dropdown_notes]);
   const [initial] = useState(() => initialDraft(profile));
   const [name, setName] = useState(initial.name);
   const [date, setDate] = useState(initial.date);
-  const [value, setValue] = useState(initial.value);
   const [notes, setNotes] = useState(initial.notes);
+  const [count, setCount] = useState(MIN_CHAIN_INPUTS);
+  const [operators, setOperators] = useState<ChainOperator[]>([]);
+  const [inputs, setInputs] = useState<string[]>(() => emptyInputs(MIN_CHAIN_INPUTS));
+  const [usesAdvanced, setUsesAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
+  const [formulaError, setFormulaError] = useState("");
   const [saving, setSaving] = useState(false);
-  const draftRef = useRef({ name, date, value, notes });
+  const draftRef = useRef({ name, date, value: "", notes });
+
+  const trimmedName = normalizeExerciseName(name);
+  const formulas = data.value_formulas ?? emptyValueFormulas();
+  const nameSpec = formulaForName(formulas, trimmedName);
+  const nameChain = typeof nameSpec === "object" ? parseChainExpr(nameSpec.expr) : null;
+  const specKey = `${trimmedName}|${JSON.stringify(nameSpec)}`;
 
   useEffect(() => {
-    draftRef.current = { name, date, value, notes };
-  }, [name, date, value, notes]);
+    if (nameChain) {
+      setCount(nameChain.count);
+      setOperators(nameChain.operators);
+      setUsesAdvanced(false);
+    } else if (nameSpec === "first_number") {
+      setCount(MIN_CHAIN_INPUTS);
+      setOperators([]);
+      setUsesAdvanced(false);
+    } else {
+      setUsesAdvanced(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specKey]);
+
+  useEffect(() => {
+    setInputs((prev) => Array.from({ length: count }, (_, i) => prev[i] ?? ""));
+  }, [count]);
+
+  useEffect(() => {
+    draftRef.current = { name, date, value: "", notes };
+  }, [name, date, notes]);
 
   useEffect(() => {
     saveUiSlice(profile, {
       entryDraftDay: todayIso(),
-      entryDraft: { name, date, value, notes },
+      entryDraft: { name, date, value: "", notes },
     });
-  }, [profile, name, date, value, notes]);
+  }, [profile, name, date, notes]);
 
   useEffect(() => {
     const syncDateForNewDay = () => {
@@ -87,31 +143,50 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
     };
   }, [profile]);
 
+  const chainExpr = useMemo(() => buildChainExpr(operators, count), [operators, count]);
+
+  const numbers = useMemo(
+    () => inputs.map((raw) => (raw.trim() === "" ? Number.NaN : Number(raw))),
+    [inputs],
+  );
+  const numbersFilled = numbers.length > 0 && numbers.every((n) => Number.isFinite(n));
+  const activeSpec: FormulaSpec = usesAdvanced ? nameSpec : { expr: chainExpr };
+  const valueText = useMemo(() => {
+    if (!numbersFilled) return "";
+    return usesAdvanced
+      ? numbers.join(", ")
+      : explainFormula(chainExpr, numbers as number[]);
+  }, [numbersFilled, usesAdvanced, numbers, chainExpr]);
+  const total = numbersFilled ? resolveNumericValue(valueText, activeSpec) : 0;
+
   const reset = () => {
     const draft = freshDraft();
     setName(draft.name);
     setNotes(draft.notes);
     setDate(draft.date);
-    setValue(draft.value);
+    setInputs(emptyInputs(count));
     clearEntryDraft(profile, draft);
   };
 
   const save = async () => {
     setError("");
-    if (!name.trim()) {
+    if (!trimmedName) {
       setError("Name is required.");
       return;
     }
-    if (!value.trim()) {
-      setError("Value is required.");
+    if (!numbersFilled) {
+      setError("Type a number in every input box.");
       return;
     }
     setSaving(true);
     try {
+      if (!usesAdvanced && !formulaSpecsEqual(nameSpec, { expr: chainExpr })) {
+        onChange(await api.setValueFormula(trimmedName, { expr: chainExpr }));
+      }
       const result = await api.createEntry({
         exercise: name,
         entry_date: displayToIso(date),
-        value: value.trim(),
+        value: valueText,
         notes,
       });
       const prevIndices = new Set(data.entries.map((entry) => entry.index));
@@ -129,11 +204,53 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
     }
   };
 
+  const changeFormula = async (target: string, spec: FormulaSpec) => {
+    try {
+      onChange(await api.setValueFormula(target, spec));
+      setFormulaError("");
+    } catch (e) {
+      setFormulaError(e instanceof Error ? e.message : "Could not save the equation.");
+    }
+  };
+
+  const makeDefaultFormula = async (spec: FormulaSpec) => {
+    try {
+      onChange(await api.setDefaultValueFormula(spec));
+      setFormulaError("");
+    } catch (e) {
+      setFormulaError(e instanceof Error ? e.message : "Could not save the default equation.");
+    }
+  };
+
+  const setInputCount = (next: number) => {
+    const clamped = clampInputCount(next);
+    setCount(clamped);
+    setOperators((prev) =>
+      Array.from({ length: clamped - 1 }, (_, i) => prev[i] ?? prev[prev.length - 1] ?? "+"),
+    );
+  };
+
+  const setOperatorAt = (index: number, op: ChainOperator) => {
+    setOperators((prev) => {
+      const next = Array.from({ length: count - 1 }, (_, i) => chainOpAt(prev, i));
+      next[index] = op;
+      return next;
+    });
+  };
+
+  const setAllOperators = (op: ChainOperator) => {
+    setOperators(Array.from({ length: Math.max(0, count - 1) }, () => op));
+  };
+
+  const setInputAt = (index: number, raw: string) => {
+    setInputs((prev) => prev.map((existing, i) => (i === index ? raw : existing)));
+  };
+
   return (
     <section className="card">
       <h2 className="card-title">Log Entry</h2>
       {error && <div className="error-banner">{error}</div>}
-      <p className="hint">Type any name, value, or note — suggestions appear from your history.</p>
+      <p className="hint">Type any name, then fill in the numbers for its equation.</p>
 
       <div className="form-grid">
         <div className="field">
@@ -153,20 +270,141 @@ export function EntryForm({ data, onSaved, onManage }: EntryFormProps) {
         <DateInput id="entry-date" value={date} onChange={setDate} />
       </div>
 
-      <div className="field" style={{ marginTop: 12 }}>
-        <label htmlFor="entry-value">Value</label>
-        <SuggestionInput
-          id="entry-value"
-          value={value}
-          options={dropdownValues}
-          onChange={setValue}
-          placeholder="10 reps"
-        />
-        <div className="btn-row" style={{ marginTop: 8 }}>
-          <button type="button" className="btn btn-ghost" onClick={() => onManage("values")}>
-            Manage values
-          </button>
+      <div className="field" style={{ marginTop: 16 }}>
+        <label>Equation{trimmedName ? ` for ${trimmedName}` : ""}</label>
+
+        <div className="formula-builder">
+          {usesAdvanced ? (
+            <p className="formula-hint" style={{ marginTop: 0 }}>
+              This name uses the advanced equation <strong>{formulaLabel(nameSpec)}</strong>.
+            </p>
+          ) : null}
+
+          <div className="formula-builder-head">
+            <span className="formula-builder-label">Inputs</span>
+            <div className="formula-stepper" role="group" aria-label="Number of inputs">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setInputCount(count - 1)}
+                disabled={count <= MIN_CHAIN_INPUTS}
+                aria-label="Fewer inputs"
+              >
+                −
+              </button>
+              <span className="formula-stepper-value">{count}</span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setInputCount(count + 1)}
+                disabled={count >= MAX_CHAIN_INPUTS}
+                aria-label="More inputs"
+              >
+                +
+              </button>
+            </div>
+            {count > 1 && !usesAdvanced ? (
+              <label className="formula-all-ops">
+                Operator
+                <select
+                  className="total-calc-select"
+                  value={chainOpAt(operators, 0)}
+                  onChange={(e) => setAllOperators(e.target.value as ChainOperator)}
+                >
+                  {CHAIN_OPERATORS.map((op) => (
+                    <option key={op} value={op}>
+                      {OPERATOR_LABELS[op]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {usesAdvanced ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setUsesAdvanced(false)}
+              >
+                Use number inputs
+              </button>
+            ) : null}
+          </div>
+
+          <div className="formula-op-row">
+            {Array.from({ length: count }, (_, i) => (
+              <span key={i} className="formula-term">
+                <span className="formula-var-chip" title={`Input ${i + 1}`}>
+                  {variableName(i)}
+                </span>
+                <input
+                  className="formula-number-input"
+                  inputMode="decimal"
+                  aria-label={`Number for input ${i + 1}`}
+                  value={inputs[i] ?? ""}
+                  onChange={(e) => setInputAt(i, e.target.value)}
+                  placeholder="0"
+                />
+                {i < count - 1 ? (
+                  <select
+                    className="formula-op-select"
+                    aria-label={`Operator between input ${i + 1} and ${i + 2}`}
+                    value={chainOpAt(operators, i)}
+                    onChange={(e) => setOperatorAt(i, e.target.value as ChainOperator)}
+                    disabled={usesAdvanced}
+                  >
+                    {CHAIN_OPERATORS.map((op) => (
+                      <option key={op} value={op}>
+                        {OPERATOR_SYMBOLS[op]}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+              </span>
+            ))}
+          </div>
+
+          <p className="formula-equation">
+            {numbersFilled ? (
+              <>
+                Saves as <code>{valueText}</code> · value <strong>{total}</strong> ·{" "}
+                {formulaLabel(activeSpec)}
+              </>
+            ) : (
+              "Fill in every input to see the value."
+            )}
+          </p>
         </div>
+
+        {formulaError && <div className="error-banner">{formulaError}</div>}
+
+        <details
+          className="formula-advanced"
+          open={showAdvanced}
+          onToggle={(e) => setShowAdvanced(e.currentTarget.open)}
+        >
+          <summary>Advanced: quick picks and custom expressions</summary>
+          <p className="hint">
+            Use this when the numbers should not simply be combined in order — for example the
+            largest number, or an average like <code>avg(a, b)</code>.
+          </p>
+          <ValueFormulaEditor
+            key={trimmedName || "__default__"}
+            name={trimmedName || "(every name)"}
+            config={formulas}
+            sampleValue={valueText}
+            onChange={(_target, spec) => {
+              if (trimmedName) void changeFormula(trimmedName, spec);
+              else void makeDefaultFormula(spec);
+            }}
+            onSetDefault={
+              trimmedName
+                ? (spec) => {
+                    void makeDefaultFormula(spec);
+                  }
+                : undefined
+            }
+          />
+        </details>
       </div>
 
       <div className="field" style={{ marginTop: 16 }}>

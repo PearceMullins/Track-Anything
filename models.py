@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, asdict
 from datetime import date, datetime, time
@@ -121,13 +122,343 @@ def canonical_value_text(value: str) -> str:
 
 
 def parse_numeric_value(text: str) -> float:
-    match = re.search(r"[-+]?\d*\.?\d+", text)
-    if not match:
+    return resolve_numeric_value(text, "first_number")
+
+
+FORMULA_PRESETS = (
+    "first_number",
+    "last_number",
+    "sum_numbers",
+    "product_numbers",
+    "max_number",
+    "min_number",
+)
+
+CHAIN_OPERATORS = ("+", "-", "*", "/", "^", "%")
+
+FORMULA_FUNCTIONS = (
+    "abs",
+    "avg",
+    "sum",
+    "min",
+    "max",
+    "round",
+    "floor",
+    "ceil",
+    "sqrt",
+)
+
+FORMULA_CONSTANTS = {"pi": math.pi, "tau": math.tau, "e": math.e}
+
+_NUMBER_RE = re.compile(r"[-+]?\d*\.?\d+")
+
+
+def empty_value_formulas() -> dict[str, Any]:
+    return {"default": "first_number", "by_name": {}}
+
+
+def _is_formula_spec(value: Any) -> bool:
+    if isinstance(value, str) and value in FORMULA_PRESETS:
+        return True
+    if isinstance(value, dict) and isinstance(value.get("expr"), str):
+        return True
+    return False
+
+
+def is_formula_spec(value: Any) -> bool:
+    return _is_formula_spec(value)
+
+
+def normalize_value_formulas(raw: Any) -> dict[str, Any]:
+    empty = empty_value_formulas()
+    if not isinstance(raw, dict):
+        return empty
+    default = raw.get("default")
+    if not _is_formula_spec(default):
+        default = empty["default"]
+    by_name: dict[str, Any] = {}
+    raw_by = raw.get("by_name")
+    if isinstance(raw_by, dict):
+        for name, spec in raw_by.items():
+            if name and _is_formula_spec(spec):
+                by_name[str(name)] = spec
+    return {"default": default, "by_name": by_name}
+
+
+def formula_for_name(config: dict[str, Any] | None, name: str) -> Any:
+    cfg = config if isinstance(config, dict) else empty_value_formulas()
+    by_name = cfg.get("by_name") if isinstance(cfg.get("by_name"), dict) else {}
+    if name in by_name:
+        return by_name[name]
+    default = cfg.get("default", "first_number")
+    return default if _is_formula_spec(default) else "first_number"
+
+
+def extract_numbers(text: str) -> list[float]:
+    out: list[float] = []
+    for match in _NUMBER_RE.finditer(text):
+        token = match.group()
+        if token in {"", "+", "-", "."}:
+            continue
+        try:
+            out.append(float(token))
+        except ValueError:
+            continue
+    return out
+
+
+def resolve_numeric_value(text: str, formula: Any = "first_number") -> float:
+    if isinstance(formula, dict) and "expr" in formula:
+        return _eval_safe_expr(str(formula.get("expr", "")), extract_numbers(text))
+    nums = extract_numbers(text)
+    if formula == "last_number":
+        return nums[-1] if nums else 0.0
+    if formula == "sum_numbers":
+        return float(sum(nums))
+    if formula == "product_numbers":
+        if not nums:
+            return 0.0
+        product = 1.0
+        for n in nums:
+            product *= n
+        return product
+    if formula == "max_number":
+        return max(nums) if nums else 0.0
+    if formula == "min_number":
+        return min(nums) if nums else 0.0
+    return nums[0] if nums else 0.0
+
+
+def set_formula_for_name(config: dict[str, Any], name: str, spec: Any) -> dict[str, Any]:
+    cfg = normalize_value_formulas(config)
+    by_name = dict(cfg["by_name"])
+    default = cfg["default"]
+    if _formula_specs_equal(default, spec):
+        by_name.pop(name, None)
+    else:
+        by_name[name] = spec
+    return {"default": default, "by_name": by_name}
+
+
+def _formula_specs_equal(a: Any, b: Any) -> bool:
+    if isinstance(a, str) or isinstance(b, str):
+        return a == b
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.get("expr") == b.get("expr")
+    return False
+
+
+def set_default_formula(config: dict[str, Any], spec: Any) -> dict[str, Any]:
+    """Sets the fallback formula and drops per-name overrides that match it."""
+    cfg = normalize_value_formulas(config)
+    by_name = {
+        name: existing
+        for name, existing in cfg["by_name"].items()
+        if not _formula_specs_equal(existing, spec)
+    }
+    return {"default": spec, "by_name": by_name}
+
+
+def rename_formula_name(config: dict[str, Any], old_name: str, new_name: str) -> dict[str, Any]:
+    cfg = normalize_value_formulas(config)
+    by_name = dict(cfg["by_name"])
+    if old_name == new_name or old_name not in by_name:
+        return cfg
+    by_name[new_name] = by_name.pop(old_name)
+    return {"default": cfg["default"], "by_name": by_name}
+
+
+def remove_formula_name(config: dict[str, Any], name: str) -> dict[str, Any]:
+    cfg = normalize_value_formulas(config)
+    by_name = dict(cfg["by_name"])
+    by_name.pop(name, None)
+    return {"default": cfg["default"], "by_name": by_name}
+
+
+def _eval_safe_expr(expr: str, numbers: list[float]) -> float:
+    trimmed = expr.strip()
+    if not trimmed:
         return 0.0
     try:
-        return float(match.group())
-    except ValueError:
+        tokens = _tokenize_expr(trimmed)
+        parser = _ExprParser(tokens, numbers)
+        value = parser.parse_expression()
+        parser.expect_end()
+        return float(value) if value == value and abs(value) != float("inf") else 0.0
+    except Exception:
         return 0.0
+
+
+def _tokenize_expr(expr: str) -> list[tuple]:
+    tokens: list[tuple] = []
+    i = 0
+    while i < len(expr):
+        ch = expr[i]
+        if ch.isspace():
+            i += 1
+            continue
+        if ch == ",":
+            tokens.append(("comma",))
+            i += 1
+            continue
+        if ch in "+-*/%^()":
+            if ch == "(":
+                tokens.append(("lparen",))
+            elif ch == ")":
+                tokens.append(("rparen",))
+            else:
+                tokens.append(("op", ch))
+            i += 1
+            continue
+        if ch.isalpha():
+            j = i + 1
+            while j < len(expr) and expr[j].isalpha():
+                j += 1
+            tokens.append(("name", expr[i:j].lower()))
+            i = j
+            continue
+        if ch.isdigit() or ch == ".":
+            j = i + 1
+            while j < len(expr) and (expr[j].isdigit() or expr[j] == "."):
+                j += 1
+            tokens.append(("num", float(expr[i:j])))
+            i = j
+            continue
+        raise ValueError("bad char")
+    return tokens
+
+
+def _is_variable_token(name: str) -> bool:
+    return len(name) == 1 and "a" <= name <= "z"
+
+
+def _safe_pow(base: float, exponent: float) -> float:
+    try:
+        value = base**exponent
+    except (OverflowError, ZeroDivisionError, ValueError):
+        return 0.0
+    if isinstance(value, complex):
+        return 0.0
+    if math.isnan(value) or math.isinf(value):
+        return 0.0
+    return float(value)
+
+
+def _apply_function(name: str, args: list[float], numbers: list[float]) -> float:
+    values = args if args else numbers
+    if name == "abs":
+        return abs(args[0] if args else 0.0)
+    if name == "avg":
+        return sum(values) / len(values) if values else 0.0
+    if name == "sum":
+        return float(sum(values))
+    if name == "min":
+        return min(values) if values else 0.0
+    if name == "max":
+        return max(values) if values else 0.0
+    if name == "round":
+        return math.floor((args[0] if args else 0.0) + 0.5)
+    if name == "floor":
+        return math.floor(args[0] if args else 0.0)
+    if name == "ceil":
+        return math.ceil(args[0] if args else 0.0)
+    if name == "sqrt":
+        value = args[0] if args else 0.0
+        return 0.0 if value < 0 else math.sqrt(value)
+    raise ValueError("bad function")
+
+
+class _ExprParser:
+    def __init__(self, tokens: list[tuple], numbers: list[float]) -> None:
+        self.tokens = tokens
+        self.numbers = numbers
+        self.i = 0
+
+    def expect_end(self) -> None:
+        if self.i < len(self.tokens):
+            raise ValueError("trailing")
+
+    def parse_expression(self) -> float:
+        left = self._parse_term()
+        while self._match_op("+") or self._match_op("-"):
+            op = self.tokens[self.i - 1][1]
+            right = self._parse_term()
+            left = left + right if op == "+" else left - right
+        return left
+
+    def _parse_term(self) -> float:
+        left = self._parse_unary()
+        while self._match_op("*") or self._match_op("/") or self._match_op("%"):
+            op = self.tokens[self.i - 1][1]
+            right = self._parse_unary()
+            if op == "*":
+                left = left * right
+            elif op == "/":
+                left = 0.0 if right == 0 else left / right
+            else:
+                left = 0.0 if right == 0 else left - right * math.trunc(left / right)
+        return left
+
+    def _parse_unary(self) -> float:
+        if self._match_op("+"):
+            return self._parse_unary()
+        if self._match_op("-"):
+            return -self._parse_unary()
+        return self._parse_power()
+
+    def _parse_power(self) -> float:
+        base = self._parse_primary()
+        if self._match_op("^"):
+            return _safe_pow(base, self._parse_unary())
+        return base
+
+    def _parse_primary(self) -> float:
+        if self.i >= len(self.tokens):
+            raise ValueError("eof")
+        tok = self.tokens[self.i]
+        kind = tok[0]
+        if kind == "num":
+            self.i += 1
+            return float(tok[1])
+        if kind == "name":
+            self.i += 1
+            name = str(tok[1])
+            if _is_variable_token(name):
+                idx = ord(name) - ord("a")
+                return self.numbers[idx] if idx < len(self.numbers) else 0.0
+            if name in FORMULA_FUNCTIONS:
+                return self._call_function(name)
+            if name in FORMULA_CONSTANTS:
+                return float(FORMULA_CONSTANTS[name])
+            raise ValueError("bad name")
+        if kind == "lparen":
+            self.i += 1
+            value = self.parse_expression()
+            if self.i >= len(self.tokens) or self.tokens[self.i][0] != "rparen":
+                raise ValueError("paren")
+            self.i += 1
+            return value
+        raise ValueError("primary")
+
+    def _call_function(self, name: str) -> float:
+        if self.i >= len(self.tokens) or self.tokens[self.i][0] != "lparen":
+            raise ValueError("expected args")
+        self.i += 1
+        args: list[float] = []
+        while self.i < len(self.tokens) and self.tokens[self.i][0] != "rparen":
+            args.append(self.parse_expression())
+            if self.i < len(self.tokens) and self.tokens[self.i][0] == "comma":
+                self.i += 1
+        if self.i >= len(self.tokens) or self.tokens[self.i][0] != "rparen":
+            raise ValueError("args")
+        self.i += 1
+        return _apply_function(name, args, self.numbers)
+
+    def _match_op(self, op: str) -> bool:
+        if self.i < len(self.tokens) and self.tokens[self.i][0] == "op" and self.tokens[self.i][1] == op:
+            self.i += 1
+            return True
+        return False
 
 
 def _coerce_value_text(raw: Any, unit: str) -> str:

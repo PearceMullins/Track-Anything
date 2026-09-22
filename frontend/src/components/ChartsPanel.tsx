@@ -17,6 +17,12 @@ import {
   type ChartSeriesRow,
 } from "../forecastData";
 import { loadUiSlice, saveUiSlice } from "../uiState";
+import {
+  emptyValueFormulas,
+  formulaForName,
+  formulaLabel,
+  type ValueFormulasConfig,
+} from "../data/valueFormulas";
 import { ChartTooltipContent } from "./ChartTooltipContent";
 
 interface ChartsPanelProps {
@@ -33,13 +39,18 @@ const ChartBlock = memo(function ChartBlock({
   chartId,
   entries,
   showForecast,
+  formulas,
 }: {
   name: string;
   chartId: string;
   entries: EntryRecord[];
   showForecast: boolean;
+  formulas: ValueFormulasConfig;
 }) {
-  const points = useMemo(() => chartPointsForExercise(entries, name), [entries, name]);
+  const points = useMemo(
+    () => chartPointsForExercise(entries, name, formulas),
+    [entries, name, formulas],
+  );
 
   const projected = useMemo(
     () => (showForecast ? computeProjectedPoints(points) : []),
@@ -132,6 +143,7 @@ export function ChartsPanel({ data }: ChartsPanelProps) {
   const profile = data.active_profile;
   const names = data.chart_names;
   const entries = data.entries;
+  const formulas = data.value_formulas ?? emptyValueFormulas();
   const saved = loadUiSlice(profile);
 
   const [selected, setSelected] = useState<Set<string>>(() => {
@@ -230,13 +242,28 @@ export function ChartsPanel({ data }: ChartsPanelProps) {
       {active.length === 0 ? (
         <p className="empty">Select one or more names above to view charts.</p>
       ) : (
-        active.map((name, i) => (
-          <section key={name} className="card chart-card">
-            <h3>{name} — value over time</h3>
-            <p className="chart-hint">Hover over a point to see notes. Dashed line extends your recent daily trend.</p>
-            <ChartBlock name={name} chartId={`c${i}`} entries={entries} showForecast={showForecast} />
-          </section>
-        ))
+        active.map((name, i) => {
+          return (
+            <section key={name} className="card chart-card">
+              <h3>{name} — value over time</h3>
+              <div className="chart-formula-row">
+                <span className="chart-formula-label">
+                  Equation: {formulaLabel(formulaForName(formulas, name))} — set in Log Entry
+                </span>
+              </div>
+              <p className="chart-hint">
+                Hover over a point to see notes. Dashed line extends your recent daily trend.
+              </p>
+              <ChartBlock
+                name={name}
+                chartId={`c${i}`}
+                entries={entries}
+                showForecast={showForecast}
+                formulas={formulas}
+              />
+            </section>
+          );
+        })
       )}
     </div>
   );

@@ -150,6 +150,27 @@ FORMULA_CONSTANTS = {"pi": math.pi, "tau": math.tau, "e": math.e}
 
 _NUMBER_RE = re.compile(r"[-+]?\d*\.?\d+")
 
+MAX_INPUT_LABEL_LENGTH = 24
+
+
+def _clean_formula_labels(spec: Any) -> Any:
+    """Input names live next to the expression: {"a": "sets", "b": "reps"}."""
+    if not isinstance(spec, dict):
+        return spec
+    raw = spec.get("labels")
+    labels: dict[str, str] = {}
+    if isinstance(raw, dict):
+        for key, value in raw.items():
+            name = str(key).strip().lower()
+            if len(name) == 1 and "a" <= name <= "l":
+                label = str(value).strip()[:MAX_INPUT_LABEL_LENGTH]
+                if label:
+                    labels[name] = label
+    cleaned = {"expr": spec.get("expr", "")}
+    if labels:
+        cleaned["labels"] = labels
+    return cleaned
+
 
 def empty_value_formulas() -> dict[str, Any]:
     return {"default": "first_number", "by_name": {}}
@@ -174,12 +195,14 @@ def normalize_value_formulas(raw: Any) -> dict[str, Any]:
     default = raw.get("default")
     if not _is_formula_spec(default):
         default = empty["default"]
+    else:
+        default = _clean_formula_labels(default)
     by_name: dict[str, Any] = {}
     raw_by = raw.get("by_name")
     if isinstance(raw_by, dict):
         for name, spec in raw_by.items():
             if name and _is_formula_spec(spec):
-                by_name[str(name)] = spec
+                by_name[str(name)] = _clean_formula_labels(spec)
     return {"default": default, "by_name": by_name}
 
 
@@ -241,7 +264,9 @@ def _formula_specs_equal(a: Any, b: Any) -> bool:
     if isinstance(a, str) or isinstance(b, str):
         return a == b
     if isinstance(a, dict) and isinstance(b, dict):
-        return a.get("expr") == b.get("expr")
+        if a.get("expr") != b.get("expr"):
+            return False
+        return _clean_formula_labels(a).get("labels") == _clean_formula_labels(b).get("labels")
     return False
 
 
@@ -259,7 +284,7 @@ def normalize_saved_equations(raw: Any) -> list[dict[str, Any]]:
         if not label or label.lower() in seen or not _is_formula_spec(spec):
             continue
         seen.add(label.lower())
-        out.append({"label": label, "spec": spec})
+        out.append({"label": label, "spec": _clean_formula_labels(spec)})
     return out
 
 
@@ -274,7 +299,7 @@ def set_saved_equation(equations: Any, label: str, spec: Any) -> list[dict[str, 
         for item in normalize_saved_equations(equations)
         if item["label"].lower() != clean.lower()
     ]
-    return [*remaining, {"label": clean, "spec": spec}]
+    return [*remaining, {"label": clean, "spec": _clean_formula_labels(spec)}]
 
 
 def remove_saved_equation(equations: Any, label: str) -> list[dict[str, Any]]:

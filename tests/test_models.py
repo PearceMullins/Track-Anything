@@ -97,6 +97,24 @@ def test_saved_equations_normalize_and_edit():
         set_saved_equation([], "Bad", "not_a_formula")
 
 
+def test_formula_labels_round_trip():
+    cfg = normalize_value_formulas(
+        {"default": {"expr": "a * b", "labels": {"a": " sets ", "b": "", "z": "nope"}}, "by_name": {}}
+    )
+    assert cfg["default"] == {"expr": "a * b", "labels": {"a": "sets"}}
+
+    cfg = set_formula_for_name(
+        empty_value_formulas(), "Pushups", {"expr": "a * b", "labels": {"a": "sets", "b": "reps"}}
+    )
+    assert cfg["by_name"]["Pushups"]["labels"] == {"a": "sets", "b": "reps"}
+
+    # Same expression, different input names: not the same equation.
+    pruned = set_default_formula(cfg, {"expr": "a * b"})
+    assert "Pushups" in pruned["by_name"]
+    pruned = set_default_formula(cfg, {"expr": "a * b", "labels": {"b": "reps", "a": "sets"}})
+    assert "Pushups" not in pruned["by_name"]
+
+
 def test_set_default_formula_prunes_matching_overrides():
     cfg = set_formula_for_name(empty_value_formulas(), "Pushups", "sum_numbers")
     cfg = set_formula_for_name(cfg, "Running", {"expr": "a * b"})

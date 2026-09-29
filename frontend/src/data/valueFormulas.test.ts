@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildChainExpr,
   clampInputCount,
+  cleanFormulaLabels,
   emptyValueFormulas,
   explainFormula,
   extractNumbers,
   formulaForName,
   formulaLabel,
+  formulaLabels,
+  formulaSpecsEqual,
   isValidExpr,
   normalizeSavedEquations,
   normalizeValueFormulas,
@@ -18,6 +21,8 @@ import {
   setSavedEquation,
   templateFromExpr,
   variableNames,
+  withFormulaLabels,
+  type FormulaSpec,
 } from "./valueFormulas";
 
 describe("valueFormulas", () => {
@@ -182,6 +187,36 @@ describe("valueFormulas", () => {
     expect(cfg.by_name.Running).toEqual({ expr: "a * b" });
     cfg = setDefaultFormula(cfg, { expr: "a * b" });
     expect(cfg.by_name.Running).toBeUndefined();
+  });
+
+  it("keeps input names with the equation", () => {
+    expect(cleanFormulaLabels({ a: " sets ", b: "", z: "nope", m: "too far" })).toEqual({
+      a: "sets",
+    });
+    expect(withFormulaLabels("a * b", ["sets", "reps"])).toEqual({
+      expr: "a * b",
+      labels: { a: "sets", b: "reps" },
+    });
+    expect(withFormulaLabels("a + b", ["", "  "])).toEqual({ expr: "a + b" });
+    expect(formulaLabels({ expr: "a * b", labels: { a: "sets", b: "" } })).toEqual({ a: "sets" });
+
+    const named: FormulaSpec = { expr: "a * b", labels: { a: "sets", b: "reps" } };
+    expect(formulaSpecsEqual(named, { expr: "a * b" })).toBe(false);
+    expect(formulaSpecsEqual(named, { expr: "a * b", labels: { b: "reps", a: "sets" } })).toBe(true);
+    expect(formulaSpecsEqual(named, { expr: "a + b", labels: { a: "sets", b: "reps" } })).toBe(
+      false,
+    );
+
+    expect(explainFormula("a * b", [3, 4], { a: "sets", b: "reps" })).toBe("sets 3 × reps 4");
+    expect(explainFormula("(a + b) / 2", [10, 2], { a: "start", b: "end" })).toBe(
+      "(start 10 + end 2) ÷ 2",
+    );
+
+    const cfg = normalizeValueFormulas({
+      default: { expr: "a * b", labels: { a: "volume", junk: "x" } },
+      by_name: {},
+    });
+    expect(formulaLabels(cfg.default)).toEqual({ a: "volume" });
   });
 
   it("keeps a reusable list of saved equations", () => {

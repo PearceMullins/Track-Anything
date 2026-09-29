@@ -72,14 +72,15 @@ saved to `track_anything_data.json` next to the app.
 - **History** — edit, delete, and review past entries
 - **Charts** — progress over time for any tracked name
 - **Custom equations** — the log form *is* the equation. Choose **Build an equation**
-  to pick an operator (add, subtract, multiply, divide, power, remainder) and how many
-  inputs you want, then type the numbers; or choose **Custom expression** and type the
-  whole equation with its numbers, e.g. `(3 + 5) * 2` or `avg(3, 4)`, using parentheses,
-  functions (`avg`, `min`, `max`, `round`, `sqrt`, …) and constants (`pi`, `e`). The
-  entry is saved as the expression you see and charts the result. Each named thing
-  keeps its own equation, so it is pre-filled the next time you log it
-- **Saved equations** — name the equation you are using (**Save this equation as…**) and
-  it becomes a chip you can apply to any other name; chips can be deleted when done
+  to pick an operator (add, subtract, multiply, divide, power, remainder), how many
+  inputs you want, and what each input is called (`sets`, `reps`, `weight`, …); or
+  choose **Custom expression** and type the whole equation with its numbers, e.g.
+  `(3 + 5) * 2` or `avg(3, 4)`, using parentheses, functions (`avg`, `min`, `max`,
+  `round`, `sqrt`, …) and constants (`pi`, `e`). The entry is saved with its input names
+  (`sets 5 × reps 5 × weight 5`) and charts the result. Each named thing keeps its own
+  equation, so it is pre-filled the next time you log it
+- **Saved equations** — **Manage equations** stores the equation you are using under a
+  name you choose, applies it to any other tracked name, renames it, or deletes it
 - **Calendar picker** — a **Calendar** button under the date field opens a month grid
   with today highlighted, month navigation, and a Today shortcut
 - **Factory reset** — the Data tab can wipe every profile, entry, and equation back to a

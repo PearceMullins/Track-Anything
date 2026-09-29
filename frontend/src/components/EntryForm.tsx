@@ -21,15 +21,18 @@ import {
   extractNumbers,
   formulaForName,
   formulaLabel,
+  formulaLabels,
   formulaSpecsEqual,
   parseChainExpr,
   resolveNumericValue,
   templateFromExpr,
   variableName,
+  withFormulaLabels,
   type ChainOperator,
   type FormulaSpec,
   type SavedEquation,
 } from "../data/valueFormulas";
+import { ManageEquationsModal } from "./ManageEquationsModal";
 
 interface EntryFormProps {
   data: Bootstrap;
@@ -64,6 +67,12 @@ function emptyInputs(count: number): string[] {
   return Array.from({ length: count }, () => "");
 }
 
+/** Input names for the first `count` variables of a spec, as a per-box array. */
+function labelsFromSpec(spec: FormulaSpec, count: number): string[] {
+  const map = formulaLabels(spec);
+  return Array.from({ length: count }, (_, index) => map[variableName(index)] ?? "");
+}
+
 function inputsFromDraft(raw: string): string[] {
   const parts = raw
     .split(",")
@@ -89,6 +98,8 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
   );
   const [operators, setOperators] = useState<ChainOperator[]>([]);
   const [customText, setCustomText] = useState(() => initial.value);
+  const [labels, setLabels] = useState<string[]>([]);
+  const [equationsOpen, setEquationsOpen] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [customTouched, setCustomTouched] = useState(false);
@@ -105,12 +116,14 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
       setMode("build");
       setCount(nameChain.count);
       setOperators(nameChain.operators);
+      setLabels(labelsFromSpec(nameSpec, nameChain.count));
       return;
     }
     if (nameSpec === "first_number") {
       setMode("build");
       setCount(MIN_CHAIN_INPUTS);
       setOperators([]);
+      setLabels([]);
       return;
     }
     setMode("custom");
@@ -170,6 +183,11 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
   }, [profile]);
 
   const chainExpr = useMemo(() => buildChainExpr(operators, count), [operators, count]);
+  const buildSpec = useMemo(
+    () => withFormulaLabels(chainExpr, labels.slice(0, count)),
+    [chainExpr, labels, count],
+  );
+  const buildLabels = useMemo(() => formulaLabels(buildSpec), [buildSpec]);
   const numbers = useMemo(
     () => inputs.map((raw) => (raw.trim() === "" ? Number.NaN : Number(raw))),
     [inputs],
@@ -188,14 +206,12 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
       ? customTemplate !== null && customNumbers.length > 0
       : numbers.length > 0 && numbers.every((n) => Number.isFinite(n));
   const activeSpec: FormulaSpec =
-    mode === "custom" && customTemplate
-      ? { expr: customTemplate }
-      : { expr: chainExpr };
+    mode === "custom" && customTemplate ? { expr: customTemplate } : buildSpec;
   const valueText = useMemo(() => {
     if (!ready) return "";
     if (mode === "custom") return customText.trim().split(/\s+/).join(" ");
-    return explainFormula(chainExpr, numbers as number[]);
-  }, [ready, mode, customText, chainExpr, numbers]);
+    return explainFormula(chainExpr, numbers as number[], buildLabels);
+  }, [ready, mode, customText, chainExpr, numbers, buildLabels]);
   const total = ready ? resolveNumericValue(valueText, activeSpec) : 0;
 
   const reset = () => {
@@ -274,6 +290,14 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
     setInputs((prev) => prev.map((existing, i) => (i === index ? raw : existing)));
   };
 
+  const setLabelAt = (index: number, value: string) => {
+    setLabels((prev) => {
+      const next = Array.from({ length: count }, (_, i) => prev[i] ?? "");
+      next[index] = value;
+      return next;
+    });
+  };
+
   const switchMode = (next: EquationMode) => {
     if (next === mode) return;
     if (next === "custom" && !customTouched) {
@@ -290,6 +314,7 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
         setMode("build");
         setCount(chain.count);
         setOperators(chain.operators);
+        setLabels(labelsFromSpec(spec, chain.count));
         return;
       }
       const numbers = inputs
@@ -301,32 +326,6 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
       return;
     }
     setMode("build");
-  };
-
-  const saveCurrentEquation = async () => {
-    if (!ready) {
-      setError("Finish the equation before saving it.");
-      return;
-    }
-    const suggested = formulaLabel(activeSpec);
-    const label = window.prompt("Name this equation so you can reuse it:", suggested);
-    if (!label?.trim()) return;
-    setError("");
-    try {
-      onChange(await api.saveEquation(label.trim(), activeSpec));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save the equation.");
-    }
-  };
-
-  const deleteSavedEquation = async (label: string) => {
-    if (!window.confirm(`Delete the saved equation "${label}"?`)) return;
-    setError("");
-    try {
-      onChange(await api.removeSavedEquation(label));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not delete the equation.");
-    }
   };
 
   const savedEquations = data.saved_equations ?? [];
@@ -423,9 +422,15 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
             <div className="formula-op-row">
               {Array.from({ length: count }, (_, i) => (
                 <span key={i} className="formula-term">
-                  <span className="formula-var-chip" title={`Input ${i + 1}`}>
-                    {variableName(i)}
-                  </span>
+                  <input
+                    className="formula-label-input"
+                    value={labels[i] ?? ""}
+                    maxLength={24}
+                    aria-label={`Name for input ${i + 1}`}
+                    title={`Rename input ${variableName(i)}`}
+                    placeholder={variableName(i)}
+                    onChange={(e) => setLabelAt(i, e.target.value)}
+                  />
                   <input
                     className="formula-number-input"
                     inputMode="decimal"
@@ -510,38 +515,30 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
         </p>
 
         <div className="saved-equations">
-          <span className="formula-builder-label">Saved</span>
-          {savedEquations.map((saved) => (
-            <span key={saved.label} className="saved-equation">
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                title={`Use ${formulaLabel(saved.spec)}`}
-                onClick={() => applySavedEquation(saved)}
-              >
-                {saved.label}
-              </button>
-              <button
-                type="button"
-                className="saved-equation-remove"
-                aria-label={`Delete saved equation ${saved.label}`}
-                title={`Delete ${saved.label}`}
-                onClick={() => void deleteSavedEquation(saved.label)}
-              >
-                ×
-              </button>
-            </span>
-          ))}
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            onClick={() => void saveCurrentEquation()}
-            disabled={!ready}
+            onClick={() => setEquationsOpen(true)}
           >
-            Save this equation as…
+            Manage equations{savedEquations.length > 0 ? ` (${savedEquations.length})` : ""}
           </button>
         </div>
       </div>
+
+      {equationsOpen ? (
+        <ManageEquationsModal
+          name={trimmedName}
+          saved={savedEquations}
+          currentSpec={ready ? activeSpec : null}
+          currentSummary={ready ? valueText : ""}
+          onApply={(saved) => {
+            applySavedEquation(saved);
+            setEquationsOpen(false);
+          }}
+          onChange={onChange}
+          onClose={() => setEquationsOpen(false)}
+        />
+      ) : null}
 
       <div className="field" style={{ marginTop: 16 }}>
         <label htmlFor="notes">Notes (optional)</label>

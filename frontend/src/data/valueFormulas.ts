@@ -11,7 +11,10 @@ export const FORMULA_PRESETS = [
 
 export type FormulaPreset = (typeof FORMULA_PRESETS)[number];
 
-export type FormulaSpec = FormulaPreset | { expr: string };
+/** Optional per-input names, e.g. { a: "sets", b: "reps" }. */
+export type FormulaLabels = Record<string, string>;
+
+export type FormulaSpec = FormulaPreset | { expr: string; labels?: FormulaLabels };
 
 export interface ValueFormulasConfig {
   default: FormulaSpec;
@@ -57,6 +60,7 @@ export const OPERATOR_SYMBOLS: Record<ChainOperator, string> = {
 
 export const MIN_CHAIN_INPUTS = 1;
 export const MAX_CHAIN_INPUTS = 12;
+export const MAX_INPUT_LABEL_LENGTH = 24;
 
 export const FORMULA_FUNCTIONS = [
   "abs",
@@ -99,19 +103,54 @@ export function isFormulaSpec(value: unknown): value is FormulaSpec {
   return false;
 }
 
+/** Keeps only usable input names: a…l, trimmed, non-empty, length-capped. */
+export function cleanFormulaLabels(raw: unknown): FormulaLabels {
+  if (!raw || typeof raw !== "object") return {};
+  const out: FormulaLabels = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const name = key.trim().toLowerCase();
+    if (!isVariableToken(name)) continue;
+    if (name.charCodeAt(0) - 97 >= MAX_CHAIN_INPUTS) continue;
+    const label = String(value ?? "").trim().slice(0, MAX_INPUT_LABEL_LENGTH);
+    if (label) out[name] = label;
+  }
+  return out;
+}
+
+export function formulaLabels(spec: FormulaSpec | null | undefined): FormulaLabels {
+  if (!spec || typeof spec !== "object") return {};
+  return cleanFormulaLabels(spec.labels);
+}
+
+/** Adds/updates the names for the given expression; empty names are dropped. */
+export function withFormulaLabels(expr: string, labels: readonly string[]): FormulaSpec {
+  const map: FormulaLabels = {};
+  labels.forEach((label, index) => {
+    const clean = label.trim().slice(0, MAX_INPUT_LABEL_LENGTH);
+    if (clean) map[variableName(index)] = clean;
+  });
+  return Object.keys(map).length > 0 ? { expr, labels: map } : { expr };
+}
+
 export function normalizeValueFormulas(raw: unknown): ValueFormulasConfig {
   const empty = emptyValueFormulas();
   if (!raw || typeof raw !== "object") return empty;
   const obj = raw as Record<string, unknown>;
-  const defaultSpec = isFormulaSpec(obj.default) ? obj.default : empty.default;
+  const defaultSpec = isFormulaSpec(obj.default) ? normalizeSpecLabels(obj.default) : empty.default;
   const byName: Record<string, FormulaSpec> = {};
   const rawByName = obj.by_name;
   if (rawByName && typeof rawByName === "object") {
     for (const [name, spec] of Object.entries(rawByName as Record<string, unknown>)) {
-      if (name && isFormulaSpec(spec)) byName[name] = spec;
+      if (name && isFormulaSpec(spec)) byName[name] = normalizeSpecLabels(spec);
     }
   }
   return { default: defaultSpec, by_name: byName };
+}
+
+function normalizeSpecLabels(spec: FormulaSpec): FormulaSpec {
+  if (typeof spec === "string") return spec;
+  const labels = cleanFormulaLabels(spec.labels);
+  return Object.keys(labels).length > 0 ? { expr: spec.expr, labels } : { expr: spec.expr };
 }
 
 export function formulaForName(
@@ -231,15 +270,19 @@ export function parseChainExpr(expr: string): { count: number; operators: ChainO
   return { count, operators };
 }
 
-/** Swaps `a`, `b`, … for the numbers pulled out of a value string. */
-export function explainFormula(expr: string, numbers: number[]): string {
+/** Swaps `a`, `b`, … for the numbers pulled out of a value string, prefixing input names when given. */
+export function explainFormula(
+  expr: string,
+  numbers: number[],
+  labels: FormulaLabels = {},
+): string {
   let tokens: Token[];
   try {
     tokens = tokenize(expr);
   } catch {
     return expr;
   }
-  return renderTokens(tokens, numbers);
+  return renderTokens(tokens, numbers, cleanFormulaLabels(labels));
 }
 
 export function isValidExpr(expr: string): boolean {
@@ -254,13 +297,14 @@ export function isValidExpr(expr: string): boolean {
   }
 }
 
-function renderTokens(tokens: Token[], numbers: number[]): string {
+function renderTokens(tokens: Token[], numbers: number[], labels: FormulaLabels = {}): string {
   return serializeTokens(
-    tokens.map((tok) =>
-      tok.kind === "name" && isVariableToken(tok.name)
-        ? { kind: "num", value: numbers[tok.name.charCodeAt(0) - 97] ?? 0 }
-        : tok,
-    ),
+    tokens.map((tok) => {
+      if (tok.kind !== "name" || !isVariableToken(tok.name)) return tok;
+      const value = numbers[tok.name.charCodeAt(0) - 97] ?? 0;
+      const label = labels[tok.name];
+      return { kind: "num", value, label } as Token & { label?: string };
+    }),
     true,
   );
 }
@@ -316,8 +360,10 @@ function serializeTokens(tokens: Token[], pretty = false): string {
   tokens.forEach((tok, i) => {
     const prev = tokens[i - 1];
     let text: string;
-    if (tok.kind === "num") text = formatNumber(tok.value);
-    else if (tok.kind === "name") text = tok.name;
+    if (tok.kind === "num") {
+      const label = (tok as Token & { label?: string }).label;
+      text = label ? `${label} ${formatNumber(tok.value)}` : formatNumber(tok.value);
+    } else if (tok.kind === "name") text = tok.name;
     else if (tok.kind === "op") {
       text = pretty ? (OPERATOR_SYMBOLS[tok.op as ChainOperator] ?? tok.op) : tok.op;
     } else if (tok.kind === "lparen") text = "(";
@@ -367,8 +413,18 @@ export function setDefaultFormula(
 
 export function formulaSpecsEqual(a: FormulaSpec, b: FormulaSpec): boolean {
   if (typeof a === "string" && typeof b === "string") return a === b;
-  if (typeof a === "object" && typeof b === "object") return a.expr === b.expr;
+  if (typeof a === "object" && typeof b === "object") {
+    if (a.expr !== b.expr) return false;
+    return labelsKey(cleanFormulaLabels(a.labels)) === labelsKey(cleanFormulaLabels(b.labels));
+  }
   return false;
+}
+
+function labelsKey(labels: FormulaLabels): string {
+  return Object.keys(labels)
+    .sort()
+    .map((key) => `${key}=${labels[key]}`)
+    .join("|");
 }
 
 export function normalizeSavedEquations(raw: unknown): SavedEquation[] {
@@ -382,7 +438,7 @@ export function normalizeSavedEquations(raw: unknown): SavedEquation[] {
     const key = label.toLowerCase();
     if (!label || seen.has(key) || !isFormulaSpec(spec)) continue;
     seen.add(key);
-    out.push({ label, spec });
+    out.push({ label, spec: normalizeSpecLabels(spec) });
   }
   return out;
 }

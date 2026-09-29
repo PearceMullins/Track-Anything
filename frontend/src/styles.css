@@ -1069,6 +1069,34 @@ tbody tr.selected {
   background: transparent;
 }
 
+.formula-label-input {
+  width: 88px;
+  padding: 4px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.formula-label-input::placeholder {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.formula-label-input:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--border-focus);
+}
+
+.saved-equation-spec {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 .saved-equation-remove {
   padding: 0 4px;
   border: 0;

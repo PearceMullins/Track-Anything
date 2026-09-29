@@ -188,33 +188,81 @@ describe("EntryForm equation", () => {
     unmount(mounted);
   });
 
-  it("lists saved equations and applies one to the builder", () => {
+  it("opens Manage equations and applies a saved equation from it", () => {
     draft("Pushups");
     const saved: SavedEquation[] = [
       { label: "Volume", spec: { expr: "a * b * c" } },
       { label: "Two-set average", spec: { expr: "avg(a, b)" } },
     ];
     const mounted = mount(bootstrap(emptyValueFormulas(), saved));
+    const manage = [...mounted.container.querySelectorAll("button")].find((item) =>
+      item.textContent?.startsWith("Manage equations"),
+    );
+    expect(manage?.textContent).toBe("Manage equations (2)");
+
+    act(() => {
+      manage?.click();
+    });
     expect(mounted.container.textContent).toContain("Volume");
     expect(mounted.container.textContent).toContain("Two-set average");
-    expect(mounted.container.textContent).toContain("Save this equation as…");
+    expect(mounted.container.textContent).toContain("Save current");
 
-    const volume = [...mounted.container.querySelectorAll("button")].find(
-      (item) => item.textContent === "Volume",
+    const volumeRow = [...mounted.container.querySelectorAll("li")].find((item) =>
+      item.textContent?.startsWith("Volume"),
+    );
+    const useCheckbox = volumeRow?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    act(() => {
+      useCheckbox?.click();
+    });
+    const useButton = [...mounted.container.querySelectorAll("button")].find(
+      (item) => item.textContent === "Use",
     );
     act(() => {
-      volume?.click();
+      useButton?.click();
     });
+
     expect(numberInputs(mounted.container)).toHaveLength(3);
+    expect(mounted.container.textContent).not.toContain("Save current");
+    unmount(mounted);
+  });
 
-    const average = [...mounted.container.querySelectorAll("button")].find(
-      (item) => item.textContent === "Two-set average",
-    );
+  it("renames the inputs and stores the names with the expression", () => {
+    draft("Pushups");
+    let formulas = emptyValueFormulas();
+    formulas = setFormulaForName(formulas, "Pushups", { expr: "a * b" });
+    const mounted = mount(bootstrap(formulas));
+
+    const labelInputs = [
+      ...mounted.container.querySelectorAll<HTMLInputElement>(".formula-label-input"),
+    ];
+    expect(labelInputs).toHaveLength(2);
+    expect(labelInputs[0].placeholder).toBe("a");
+
+    const boxes = numberInputs(mounted.container);
     act(() => {
-      average?.click();
+      typeInto(labelInputs[0], "sets");
+      typeInto(labelInputs[1], "reps");
+      typeInto(boxes[0], "3");
+      typeInto(boxes[1], "4");
     });
-    const input = mounted.container.querySelector<HTMLInputElement>("#entry-custom-equation");
-    expect(input?.value).toBe("avg(0, 0)");
+
+    expect(mounted.container.textContent).toContain("sets 3 × reps 4");
+    expect(mounted.container.textContent).toContain("12");
+    unmount(mounted);
+  });
+
+  it("shows saved input names on a name's equation", () => {
+    draft("Pushups");
+    let formulas = emptyValueFormulas();
+    formulas = setFormulaForName(formulas, "Pushups", {
+      expr: "a * b",
+      labels: { a: "sets", b: "reps" },
+    });
+    const mounted = mount(bootstrap(formulas));
+    const labelInputs = [
+      ...mounted.container.querySelectorAll<HTMLInputElement>(".formula-label-input"),
+    ];
+    expect(labelInputs.map((input) => input.value)).toEqual(["sets", "reps"]);
     unmount(mounted);
   });
 });

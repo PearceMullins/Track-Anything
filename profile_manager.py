@@ -202,3 +202,12 @@ class ProfileManager:
 
     def remove_names(self, names: list[str]) -> int:
         return self._store.remove_names(names)
+
+    def reset(self) -> None:
+        """Factory reset: drop every profile and start fresh with Default."""
+        self._active = DEFAULT_PROFILE
+        self._profiles = {DEFAULT_PROFILE: empty_store_payload()}
+        self._hidden_profiles = set()
+        self._custom_profiles = set()
+        self._apply_active()
+        self.save_all()

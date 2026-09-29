@@ -169,6 +169,27 @@ export class ProfileManager {
     keys.forEach((key) => localStorage.removeItem(key));
   }
 
+  /** Factory reset: drop every profile and start fresh with Default. */
+  factoryReset(): void {
+    localStorage.removeItem(ROOT_KEY);
+    localStorage.removeItem(LEGACY_KEY);
+    this.clearProfileStorage();
+    this.payloadCache = {};
+    this.active = DEFAULT_PROFILE;
+    this.profileNames = [DEFAULT_PROFILE];
+    this.hiddenProfiles = new Set();
+    this.customProfiles = new Set();
+    this.writeRoot({
+      version: 2,
+      active_profile: DEFAULT_PROFILE,
+      profile_names: [DEFAULT_PROFILE],
+      hidden_profiles: [],
+      custom_profiles: [],
+    });
+    this.writeProfilePayload(DEFAULT_PROFILE, emptyPayload());
+    this.applyActive(emptyPayload());
+  }
+
   private persistActive(payload: PersistedPayload): void {
     this.writeProfilePayload(this.active, payload);
   }

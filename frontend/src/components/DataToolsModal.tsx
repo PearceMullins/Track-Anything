@@ -15,12 +15,18 @@ import { exportUiState, importUiState } from "../uiState";
 interface DataToolsModalProps {
   onClose: () => void;
   onImported: (data: Bootstrap) => void;
+  onReset: (data: Bootstrap) => void;
 }
 
-export function DataToolsModal({ onClose, onImported }: DataToolsModalProps) {
+const RESET_PHRASE = "factory reset";
+
+export function DataToolsModal({ onClose, onImported, onReset }: DataToolsModalProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [resetText, setResetText] = useState("");
+
+  const resetConfirmed = resetText.trim().toLowerCase() === RESET_PHRASE;
 
   const buildBackup = async () => ({
     ...(await api.exportAppData()),
@@ -124,6 +130,21 @@ export function DataToolsModal({ onClose, onImported }: DataToolsModalProps) {
     }
   };
 
+  const factoryReset = async () => {
+    if (!resetConfirmed) return;
+    setError("");
+    setStatus("");
+    try {
+      const next = await api.resetAppData();
+      importUiState({ tab: "log", byProfile: {} });
+      onReset(next);
+      setResetText("");
+      setStatus("Factory reset complete. Starting fresh with the Default profile.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Factory reset failed.");
+    }
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-narrow" onClick={(e) => e.stopPropagation()}>
@@ -163,6 +184,36 @@ export function DataToolsModal({ onClose, onImported }: DataToolsModalProps) {
             }}
           />
         </div>
+
+        <section className="danger-zone">
+          <h3>Factory reset</h3>
+          <p className="hint">
+            Deletes every profile, entry, equation, and saved list, and returns the app to a fresh
+            install with only the Default profile. This cannot be undone — export a backup first if
+            you might want your data back.
+          </p>
+          <label htmlFor="factory-reset-confirm">
+            Type <strong>{RESET_PHRASE}</strong> to confirm
+          </label>
+          <input
+            id="factory-reset-confirm"
+            value={resetText}
+            onChange={(e) => setResetText(e.target.value)}
+            placeholder={RESET_PHRASE}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <div className="btn-row" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => void factoryReset()}
+              disabled={!resetConfirmed}
+            >
+              Factory reset
+            </button>
+          </div>
+        </section>
 
         <div className="btn-row">
           <button type="button" className="btn btn-ghost" onClick={onClose} style={{ marginLeft: "auto" }}>

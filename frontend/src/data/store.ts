@@ -1,7 +1,6 @@
 /** LocalStorage-backed store for Capacitor / offline Android builds. */
 
 import {
-  NAME_SUGGESTIONS,
   VALUE_SUGGESTIONS,
   NOTE_SUGGESTIONS,
   TrackEntry,
@@ -15,13 +14,17 @@ import {
 import {
   emptyValueFormulas,
   formulaForName,
+  normalizeSavedEquations,
   normalizeValueFormulas,
   removeFormulaName,
+  removeSavedEquation as removeSavedEquationEntry,
   renameFormulaName,
   resolveNumericValue,
-  setFormulaForName,
   setDefaultFormula,
+  setFormulaForName,
+  setSavedEquation,
   type FormulaSpec,
+  type SavedEquation,
   type ValueFormulasConfig,
 } from "./valueFormulas";
 
@@ -36,6 +39,7 @@ export interface PersistedPayload {
   hidden_notes: string[];
   custom_notes: string[];
   value_formulas: ValueFormulasConfig;
+  saved_equations: SavedEquation[];
 }
 
 export function emptyPayload(): PersistedPayload {
@@ -48,6 +52,7 @@ export function emptyPayload(): PersistedPayload {
     hidden_notes: [],
     custom_notes: [],
     value_formulas: emptyValueFormulas(),
+    saved_equations: [],
   };
 }
 
@@ -125,6 +130,7 @@ export class LocalTrackStore {
         canonicalNoteText(normalizeNoteText(n)),
       ),
       value_formulas: normalizeValueFormulas(parsed.value_formulas),
+      saved_equations: normalizeSavedEquations(parsed.saved_equations),
     };
     return this.backfillLoggedAt();
   }
@@ -190,9 +196,6 @@ export class LocalTrackStore {
     if (this.listCache.names) return this.listCache.names;
     const names = new Set(this.exerciseNames());
     this.payload.custom_names.forEach((n) => names.add(n));
-    NAME_SUGGESTIONS.forEach((s) => {
-      if (!this.payload.hidden_names.includes(s)) names.add(s);
-    });
     this.payload.hidden_names.forEach((n) => names.delete(n));
     const result = [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     this.listCache.names = result;
@@ -440,6 +443,20 @@ export class LocalTrackStore {
 
   setValueFormulas(config: ValueFormulasConfig): void {
     this.payload.value_formulas = normalizeValueFormulas(config);
+    this.save();
+  }
+
+  get savedEquations(): SavedEquation[] {
+    return this.payload.saved_equations;
+  }
+
+  saveEquation(label: string, spec: FormulaSpec): void {
+    this.payload.saved_equations = setSavedEquation(this.payload.saved_equations, label, spec);
+    this.save();
+  }
+
+  removeSavedEquation(label: string): void {
+    this.payload.saved_equations = removeSavedEquationEntry(this.payload.saved_equations, label);
     this.save();
   }
 

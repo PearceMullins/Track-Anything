@@ -59,6 +59,7 @@ export function buildBootstrap(
     active_profile: activeProfile,
     dropdown_profiles: dropdownProfiles,
     value_formulas: formulas,
+    saved_equations: store.savedEquations,
   };
 }
 

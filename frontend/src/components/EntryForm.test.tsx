@@ -3,12 +3,15 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { EntryForm } from "./EntryForm";
 import type { Bootstrap } from "../types";
-import { emptyValueFormulas, setFormulaForName } from "../data/valueFormulas";
+import { emptyValueFormulas, setFormulaForName, type SavedEquation } from "../data/valueFormulas";
 import { importUiState, saveUiSlice } from "../uiState";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-function bootstrap(formulas = emptyValueFormulas()): Bootstrap {
+function bootstrap(
+  formulas = emptyValueFormulas(),
+  saved: SavedEquation[] = [],
+): Bootstrap {
   return {
     entries: [],
     history_rows: [],
@@ -21,6 +24,7 @@ function bootstrap(formulas = emptyValueFormulas()): Bootstrap {
     active_profile: "Default",
     dropdown_profiles: ["Default"],
     value_formulas: formulas,
+    saved_equations: saved,
   };
 }
 
@@ -181,6 +185,36 @@ describe("EntryForm equation", () => {
     const mounted = mount(bootstrap(formulas));
     const boxes = numberInputs(mounted.container);
     expect(boxes.map((box) => box.value)).toEqual(["3", "10"]);
+    unmount(mounted);
+  });
+
+  it("lists saved equations and applies one to the builder", () => {
+    draft("Pushups");
+    const saved: SavedEquation[] = [
+      { label: "Volume", spec: { expr: "a * b * c" } },
+      { label: "Two-set average", spec: { expr: "avg(a, b)" } },
+    ];
+    const mounted = mount(bootstrap(emptyValueFormulas(), saved));
+    expect(mounted.container.textContent).toContain("Volume");
+    expect(mounted.container.textContent).toContain("Two-set average");
+    expect(mounted.container.textContent).toContain("Save this equation as…");
+
+    const volume = [...mounted.container.querySelectorAll("button")].find(
+      (item) => item.textContent === "Volume",
+    );
+    act(() => {
+      volume?.click();
+    });
+    expect(numberInputs(mounted.container)).toHaveLength(3);
+
+    const average = [...mounted.container.querySelectorAll("button")].find(
+      (item) => item.textContent === "Two-set average",
+    );
+    act(() => {
+      average?.click();
+    });
+    const input = mounted.container.querySelector<HTMLInputElement>("#entry-custom-equation");
+    expect(input?.value).toBe("avg(0, 0)");
     unmount(mounted);
   });
 });

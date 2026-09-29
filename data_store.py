@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from models import (
-    NAME_SUGGESTIONS,
     VALUE_SUGGESTIONS,
     NOTE_SUGGESTIONS,
     TrackEntry,
@@ -24,6 +23,9 @@ from models import (
     set_default_formula,
     rename_formula_name,
     remove_formula_name,
+    normalize_saved_equations,
+    set_saved_equation,
+    remove_saved_equation as drop_saved_equation,
     is_formula_spec,
 )
 from paths import data_file
@@ -41,6 +43,7 @@ def empty_store_payload() -> dict:
         "hidden_notes": [],
         "custom_notes": [],
         "value_formulas": empty_value_formulas(),
+        "saved_equations": [],
     }
 
 
@@ -56,6 +59,7 @@ class TrackStore:
         self._hidden_notes: set[str] = set()
         self._custom_notes: set[str] = set()
         self._value_formulas: dict = empty_value_formulas()
+        self._saved_equations: list[dict] = []
         if self.path is not None:
             self.load()
 
@@ -82,6 +86,7 @@ class TrackStore:
         self._hidden_notes = set()
         self._custom_notes = set()
         self._value_formulas = empty_value_formulas()
+        self._saved_equations = []
 
     def to_payload(self) -> dict:
         return {
@@ -93,6 +98,7 @@ class TrackStore:
             "hidden_notes": sorted(self._hidden_notes, key=str.lower),
             "custom_notes": sorted(self._custom_notes, key=str.lower),
             "value_formulas": normalize_value_formulas(self._value_formulas),
+            "saved_equations": normalize_saved_equations(self._saved_equations),
         }
 
     def load_from_payload(self, raw: dict) -> None:
@@ -104,6 +110,7 @@ class TrackStore:
         self._hidden_notes = {normalize_note_text(n) for n in raw.get("hidden_notes", [])}
         self._custom_notes = {normalize_note_text(n) for n in raw.get("custom_notes", [])}
         self._value_formulas = normalize_value_formulas(raw.get("value_formulas"))
+        self._saved_equations = normalize_saved_equations(raw.get("saved_equations"))
         self._backfill_logged_at()
         if self._canonicalize_custom_lists():
             self.save()
@@ -162,9 +169,6 @@ class TrackStore:
     def dropdown_names(self) -> list[str]:
         names: set[str] = set(self.exercise_names())
         names |= self._custom_names
-        for suggestion in NAME_SUGGESTIONS:
-            if suggestion not in self._hidden_names:
-                names.add(suggestion)
         names -= self._hidden_names
         return sorted(names, key=str.lower)
 
@@ -399,6 +403,17 @@ class TrackStore:
         if not is_formula_spec(formula):
             raise ValueError("Invalid formula.")
         self._value_formulas = set_default_formula(self._value_formulas, formula)
+        self.save()
+
+    def saved_equations(self) -> list[dict]:
+        return normalize_saved_equations(self._saved_equations)
+
+    def save_equation(self, label: str, formula: Any) -> None:
+        self._saved_equations = set_saved_equation(self._saved_equations, label, formula)
+        self.save()
+
+    def remove_saved_equation(self, label: str) -> None:
+        self._saved_equations = drop_saved_equation(self._saved_equations, label)
         self.save()
 
     @staticmethod

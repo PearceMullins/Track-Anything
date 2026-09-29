@@ -28,6 +28,7 @@ import {
   variableName,
   type ChainOperator,
   type FormulaSpec,
+  type SavedEquation,
 } from "../data/valueFormulas";
 
 interface EntryFormProps {
@@ -281,6 +282,55 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
     setMode(next);
   };
 
+  const applySavedEquation = (saved: SavedEquation) => {
+    const spec = saved.spec;
+    if (typeof spec === "object") {
+      const chain = parseChainExpr(spec.expr);
+      if (chain) {
+        setMode("build");
+        setCount(chain.count);
+        setOperators(chain.operators);
+        return;
+      }
+      const numbers = inputs
+        .map((raw) => Number(raw))
+        .filter((value) => Number.isFinite(value));
+      setMode("custom");
+      setCustomTouched(true);
+      setCustomText(explainFormula(spec.expr, numbers));
+      return;
+    }
+    setMode("build");
+  };
+
+  const saveCurrentEquation = async () => {
+    if (!ready) {
+      setError("Finish the equation before saving it.");
+      return;
+    }
+    const suggested = formulaLabel(activeSpec);
+    const label = window.prompt("Name this equation so you can reuse it:", suggested);
+    if (!label?.trim()) return;
+    setError("");
+    try {
+      onChange(await api.saveEquation(label.trim(), activeSpec));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save the equation.");
+    }
+  };
+
+  const deleteSavedEquation = async (label: string) => {
+    if (!window.confirm(`Delete the saved equation "${label}"?`)) return;
+    setError("");
+    try {
+      onChange(await api.removeSavedEquation(label));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete the equation.");
+    }
+  };
+
+  const savedEquations = data.saved_equations ?? [];
+
   return (
     <section className="card">
       <h2 className="card-title">Log Entry</h2>
@@ -458,6 +508,39 @@ export function EntryForm({ data, onSaved, onChange, onManage }: EntryFormProps)
             "The expression is not ready yet."
           )}
         </p>
+
+        <div className="saved-equations">
+          <span className="formula-builder-label">Saved</span>
+          {savedEquations.map((saved) => (
+            <span key={saved.label} className="saved-equation">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                title={`Use ${formulaLabel(saved.spec)}`}
+                onClick={() => applySavedEquation(saved)}
+              >
+                {saved.label}
+              </button>
+              <button
+                type="button"
+                className="saved-equation-remove"
+                aria-label={`Delete saved equation ${saved.label}`}
+                title={`Delete ${saved.label}`}
+                onClick={() => void deleteSavedEquation(saved.label)}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => void saveCurrentEquation()}
+            disabled={!ready}
+          >
+            Save this equation as…
+          </button>
+        </div>
       </div>
 
       <div className="field" style={{ marginTop: 16 }}>

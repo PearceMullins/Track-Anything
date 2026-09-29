@@ -310,6 +310,135 @@ select {
   opacity: 1;
 }
 
+.calendar {
+  margin-top: 10px;
+  max-width: 320px;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.calendar-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.calendar-nav {
+  min-width: 32px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.calendar-weekdays {
+  margin: 8px 0 4px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.calendar-day {
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.calendar-day:hover {
+  background: var(--bg-elevated);
+}
+
+.calendar-day.outside {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.calendar-day.today {
+  border-color: var(--accent);
+}
+
+.calendar-day.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.calendar-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+.danger-zone {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid rgba(240, 113, 120, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(240, 113, 120, 0.06);
+}
+
+.danger-zone h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: var(--danger);
+}
+
+.danger-zone label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 0.85rem;
+}
+
+.danger-zone strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+}
+
+.danger-zone input {
+  width: 100%;
+  max-width: 260px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text);
+  font: inherit;
+}
+
+.danger-zone input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .textarea {
   resize: vertical;
   min-height: 72px;
@@ -915,6 +1044,43 @@ tbody tr.selected {
 
 .formula-advanced {
   margin-top: 10px;
+}
+
+.saved-equations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.saved-equation {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+
+.saved-equation .btn {
+  border: 0;
+  background: transparent;
+}
+
+.saved-equation-remove {
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.saved-equation-remove:hover {
+  color: var(--danger);
 }
 
 .formula-advanced > summary {

@@ -1,4 +1,4 @@
-import type { ValueFormulasConfig } from "./data/valueFormulas";
+import type { SavedEquation, ValueFormulasConfig } from "./data/valueFormulas";
 
 export interface EntryRecord {
   index: number;
@@ -30,6 +30,7 @@ export interface Bootstrap {
   active_profile: string;
   dropdown_profiles: string[];
   value_formulas: ValueFormulasConfig;
+  saved_equations: SavedEquation[];
 }
 
 export interface ChartPointDetail {

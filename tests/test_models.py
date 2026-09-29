@@ -2,6 +2,8 @@
 
 from datetime import date
 
+import pytest
+
 from models import (
     TrackEntry,
     normalize_exercise_name,
@@ -13,6 +15,9 @@ from models import (
     empty_value_formulas,
     set_default_formula,
     set_formula_for_name,
+    normalize_saved_equations,
+    set_saved_equation,
+    remove_saved_equation,
 )
 
 
@@ -61,6 +66,35 @@ def test_resolve_numeric_value_functions_and_constants():
     assert resolve_numeric_value("1", {"expr": "round(pi * 100)"}) == 314.0
     assert resolve_numeric_value("1 2", {"expr": "nope(a, b)"}) == 0.0
     assert resolve_numeric_value("1 2", {"expr": "min("}) == 0.0
+
+
+def test_saved_equations_normalize_and_edit():
+    assert normalize_saved_equations(None) == []
+    assert normalize_saved_equations(
+        [
+            {"label": "Volume", "spec": {"expr": "a * b"}},
+            {"label": "", "spec": {"expr": "a"}},
+            {"label": "Bad", "spec": "nope"},
+            "junk",
+            {"label": "volume", "spec": {"expr": "a + b"}},
+        ]
+    ) == [{"label": "Volume", "spec": {"expr": "a * b"}}]
+
+    equations = set_saved_equation([], "Volume", {"expr": "a * b"})
+    equations = set_saved_equation(equations, "Average", {"expr": "avg(a, b)"})
+    assert [item["label"] for item in equations] == ["Volume", "Average"]
+
+    equations = set_saved_equation(equations, "volume", {"expr": "a / b"})
+    assert [item["label"] for item in equations] == ["Average", "volume"]
+    assert equations[-1]["spec"] == {"expr": "a / b"}
+
+    equations = remove_saved_equation(equations, "AVERAGE")
+    assert [item["label"] for item in equations] == ["volume"]
+
+    with pytest.raises(ValueError):
+        set_saved_equation([], "  ", {"expr": "a"})
+    with pytest.raises(ValueError):
+        set_saved_equation([], "Bad", "not_a_formula")
 
 
 def test_set_default_formula_prunes_matching_overrides():

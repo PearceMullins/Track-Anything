@@ -8,8 +8,6 @@ from dataclasses import dataclass, asdict
 from datetime import date, datetime, time
 from typing import Any
 
-NAME_SUGGESTIONS = ("Calories", "Body Weight", "Pushups", "Pullups", "Running")
-
 VALUE_SUGGESTIONS = ("10 reps", "5 reps", "20 reps", "3 miles", "30 minutes", "200 lbs", "150 lbs")
 
 NOTE_SUGGESTIONS = ("Morning", "Evening", "Felt good", "PR day")
@@ -239,13 +237,53 @@ def set_formula_for_name(config: dict[str, Any], name: str, spec: Any) -> dict[s
         by_name[name] = spec
     return {"default": default, "by_name": by_name}
 
-
 def _formula_specs_equal(a: Any, b: Any) -> bool:
     if isinstance(a, str) or isinstance(b, str):
         return a == b
     if isinstance(a, dict) and isinstance(b, dict):
         return a.get("expr") == b.get("expr")
     return False
+
+
+def normalize_saved_equations(raw: Any) -> list[dict[str, Any]]:
+    """Named equations a profile can reuse across tracked names."""
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label", "")).strip()
+        spec = item.get("spec")
+        if not label or label.lower() in seen or not _is_formula_spec(spec):
+            continue
+        seen.add(label.lower())
+        out.append({"label": label, "spec": spec})
+    return out
+
+
+def set_saved_equation(equations: Any, label: str, spec: Any) -> list[dict[str, Any]]:
+    clean = str(label).strip()
+    if not clean:
+        raise ValueError("Label cannot be empty.")
+    if not _is_formula_spec(spec):
+        raise ValueError("Invalid equation.")
+    remaining = [
+        item
+        for item in normalize_saved_equations(equations)
+        if item["label"].lower() != clean.lower()
+    ]
+    return [*remaining, {"label": clean, "spec": spec}]
+
+
+def remove_saved_equation(equations: Any, label: str) -> list[dict[str, Any]]:
+    target = str(label).strip().lower()
+    return [
+        item
+        for item in normalize_saved_equations(equations)
+        if item["label"].lower() != target
+    ]
 
 
 def set_default_formula(config: dict[str, Any], spec: Any) -> dict[str, Any]:

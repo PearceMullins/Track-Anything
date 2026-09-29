@@ -48,6 +48,30 @@ export function importAppData(raw: unknown): Promise<Bootstrap> {
   return request("/data/import", { method: "POST", body: JSON.stringify(raw) });
 }
 
+export function resetAppData(): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localFactoryReset());
+  return request("/data/reset", { method: "POST" });
+}
+
+export function saveEquation(
+  label: string,
+  formula: import("./data/valueFormulas").FormulaSpec,
+): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localSaveEquation(label, formula));
+  return request("/saved-equations", {
+    method: "POST",
+    body: JSON.stringify({ label, formula }),
+  });
+}
+
+export function removeSavedEquation(label: string): Promise<Bootstrap> {
+  if (isLocalMode()) return runLocal(() => local.localRemoveSavedEquation(label));
+  return request("/saved-equations/remove", {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  });
+}
+
 export function createEntry(body: unknown): Promise<Bootstrap> {
   if (isLocalMode()) {
     return runLocal(() => local.localCreateEntry(body as EntryInput));

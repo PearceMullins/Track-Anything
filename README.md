@@ -78,6 +78,12 @@ saved to `track_anything_data.json` next to the app.
   functions (`avg`, `min`, `max`, `round`, `sqrt`, …) and constants (`pi`, `e`). The
   entry is saved as the expression you see and charts the result. Each named thing
   keeps its own equation, so it is pre-filled the next time you log it
+- **Saved equations** — name the equation you are using (**Save this equation as…**) and
+  it becomes a chip you can apply to any other name; chips can be deleted when done
+- **Calendar picker** — a **Calendar** button under the date field opens a month grid
+  with today highlighted, month navigation, and a Today shortcut
+- **Factory reset** — the Data tab can wipe every profile, entry, and equation back to a
+  fresh install; it only runs after you type `factory reset` to confirm
 - **Local-first** — data stays on your device; no login required
 - **Android and iOS builds** — Capacitor apps with on-device storage
 - **Optional tips** — Google Play donations only; no locked features

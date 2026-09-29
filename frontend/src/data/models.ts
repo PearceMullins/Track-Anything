@@ -2,14 +2,6 @@
 
 import { resolveNumericValue, type FormulaSpec } from "./valueFormulas";
 
-export const NAME_SUGGESTIONS = [
-  "Calories",
-  "Body Weight",
-  "Pushups",
-  "Pullups",
-  "Running",
-] as const;
-
 export const VALUE_SUGGESTIONS = [
   "10 reps",
   "5 reps",

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   localCreateEntry,
   localExportData,
+  localFactoryReset,
   localFetchBootstrap,
   localImportData,
   localRemoveNotes,
@@ -145,5 +146,32 @@ describe("local backup", () => {
     data = localSetDefaultValueFormula("sum_numbers");
     expect(data.value_formulas.by_name.Situps).toBeUndefined();
     expect(data.entries.map((e) => e.numeric_value)).toEqual([12, 14]);
+  });
+
+  it("factory reset drops every profile and starts fresh", () => {
+    localCreateEntry({
+      exercise: "Pushups",
+      entry_date: "2026-06-11",
+      value: "10 reps",
+    });
+    localSetValueFormula("Pushups", "sum_numbers");
+    localSwitchProfile("Travel");
+    localCreateEntry({
+      exercise: "Walking",
+      entry_date: "2026-06-12",
+      value: "3 miles",
+    });
+
+    const data = localFactoryReset();
+    expect(data.active_profile).toBe("Default");
+    expect(data.dropdown_profiles).toEqual(["Default"]);
+    expect(data.entries).toEqual([]);
+    expect(data.chart_names).toEqual([]);
+    expect(data.dropdown_names).toEqual([]);
+    expect(data.value_formulas).toEqual({ default: "first_number", by_name: {} });
+
+    localSwitchProfile("Travel");
+    expect(localFetchBootstrap().entries).toEqual([]);
+    expect(localFetchBootstrap().value_formulas.default).toBe("first_number");
   });
 });

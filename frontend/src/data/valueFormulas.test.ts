@@ -8,11 +8,14 @@ import {
   formulaForName,
   formulaLabel,
   isValidExpr,
+  normalizeSavedEquations,
   normalizeValueFormulas,
   parseChainExpr,
+  removeSavedEquation,
   resolveNumericValue,
   setDefaultFormula,
   setFormulaForName,
+  setSavedEquation,
   templateFromExpr,
   variableNames,
 } from "./valueFormulas";
@@ -179,5 +182,31 @@ describe("valueFormulas", () => {
     expect(cfg.by_name.Running).toEqual({ expr: "a * b" });
     cfg = setDefaultFormula(cfg, { expr: "a * b" });
     expect(cfg.by_name.Running).toBeUndefined();
+  });
+
+  it("keeps a reusable list of saved equations", () => {
+    expect(normalizeSavedEquations(null)).toEqual([]);
+    expect(
+      normalizeSavedEquations([
+        { label: "Volume", spec: { expr: "a * b" } },
+        { label: "", spec: { expr: "a" } },
+        { label: "Bad", spec: "nope" },
+        "junk",
+        { label: "volume", spec: { expr: "a + b" } },
+      ]),
+    ).toEqual([{ label: "Volume", spec: { expr: "a * b" } }]);
+
+    let list = setSavedEquation([], "Volume", { expr: "a * b" });
+    list = setSavedEquation(list, "Average", { expr: "avg(a, b)" });
+    expect(list.map((item) => item.label)).toEqual(["Volume", "Average"]);
+
+    list = setSavedEquation(list, "volume", { expr: "a / b" });
+    expect(list.map((item) => item.label)).toEqual(["Average", "volume"]);
+    expect(list[1].spec).toEqual({ expr: "a / b" });
+
+    list = removeSavedEquation(list, "AVERAGE");
+    expect(list.map((item) => item.label)).toEqual(["volume"]);
+
+    expect(() => setSavedEquation([], "  ", { expr: "a" })).toThrow();
   });
 });

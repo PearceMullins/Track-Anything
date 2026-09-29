@@ -78,6 +78,15 @@ class DefaultValueFormulaInput(BaseModel):
     formula: str | dict = "first_number"
 
 
+class SavedEquationInput(BaseModel):
+    label: str
+    formula: str | dict = "first_number"
+
+
+class SavedEquationLabelInput(BaseModel):
+    label: str
+
+
 def _store():
     return profiles.store
 
@@ -120,6 +129,7 @@ def _bootstrap() -> dict:
         "active_profile": profiles.active_profile,
         "dropdown_profiles": profiles.dropdown_profiles(),
         "value_formulas": store.value_formulas(),
+        "saved_equations": store.saved_equations(),
     }
 
 
@@ -164,6 +174,21 @@ def set_default_value_formula(body: DefaultValueFormulaInput) -> dict:
     if not is_formula_spec(body.formula):
         raise HTTPException(400, "Invalid formula.")
     _store().set_default_value_formula(body.formula)
+    return _bootstrap()
+
+
+@app.post("/api/saved-equations")
+def save_equation(body: SavedEquationInput) -> dict:
+    try:
+        _store().save_equation(body.label, body.formula)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _bootstrap()
+
+
+@app.post("/api/saved-equations/remove")
+def remove_saved_equation(body: SavedEquationLabelInput) -> dict:
+    _store().remove_saved_equation(body.label)
     return _bootstrap()
 
 
@@ -322,6 +347,12 @@ def import_data(body: dict) -> dict:
         profiles.import_data(body)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
+    return _bootstrap()
+
+
+@app.post("/api/data/reset")
+def reset_data() -> dict:
+    profiles.reset()
     return _bootstrap()
 
 

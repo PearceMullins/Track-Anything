@@ -138,3 +138,18 @@ export function localSetDefaultValueFormula(formula: FormulaSpec): Bootstrap {
   getProfileManager().trackStore.setDefaultValueFormula(formula);
   return bootstrap();
 }
+
+export function localFactoryReset(): Bootstrap {
+  getProfileManager().factoryReset();
+  return bootstrap();
+}
+
+export function localSaveEquation(label: string, formula: FormulaSpec): Bootstrap {
+  getProfileManager().trackStore.saveEquation(label, formula);
+  return bootstrap();
+}
+
+export function localRemoveSavedEquation(label: string): Bootstrap {
+  getProfileManager().trackStore.removeSavedEquation(label);
+  return bootstrap();
+}

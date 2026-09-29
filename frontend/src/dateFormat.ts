@@ -38,6 +38,53 @@ export function todayDisplay(): string {
   return isoToDisplay(todayIso());
 }
 
+export interface YearMonth {
+  year: number;
+  /** 0-based month, matching Date#getMonth. */
+  month: number;
+}
+
+export const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+export function isoFromParts(year: number, month: number, day: number): string {
+  return `${year}-${pad2(month + 1)}-${pad2(day)}`;
+}
+
+export function isoToYearMonth(iso: string): YearMonth {
+  const [year, month] = iso.split("-");
+  const parsedYear = Number(year);
+  const parsedMonth = Number(month);
+  if (!Number.isFinite(parsedYear) || !Number.isFinite(parsedMonth)) {
+    return isoToYearMonth(todayIso());
+  }
+  return { year: parsedYear, month: Math.min(11, Math.max(0, parsedMonth - 1)) };
+}
+
+export function shiftYearMonth({ year, month }: YearMonth, delta: number): YearMonth {
+  const shifted = new Date(year, month + delta, 1);
+  return { year: shifted.getFullYear(), month: shifted.getMonth() };
+}
+
+export function yearMonthLabel({ year, month }: YearMonth): string {
+  return new Date(year, month, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/** Six Sunday-first weeks covering the month, as ISO dates. */
+export function monthGridIso({ year, month }: YearMonth): string[] {
+  const first = new Date(year, month, 1);
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(year, month, 1 - first.getDay() + index);
+    return isoFromParts(day.getFullYear(), day.getMonth(), day.getDate());
+  });
+}
+
 /** Use saved draft date only when the draft was touched on the same calendar day. */
 export function resolveEntryDraftDate(
   savedDate: string | undefined,

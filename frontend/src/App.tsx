@@ -263,6 +263,14 @@ export default function App() {
             setTab(loadUiState().tab ?? "log");
             setChartsSnapshot(null);
           }}
+          onReset={(next) => {
+            onChange(next);
+            setHistoryDisplayFocus(null);
+            setTab("log");
+            saveUiState({ tab: "log" });
+            setChartsSnapshot(null);
+            setDataToolsOpen(false);
+          }}
         />
       )}
 

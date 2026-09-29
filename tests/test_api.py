@@ -12,7 +12,7 @@ def test_bootstrap_empty(client):
     data = client.get("/api/bootstrap").json()
     assert data["entries"] == []
     assert data["history_rows"] == []
-    assert "Calories" in data["dropdown_names"]
+    assert data["dropdown_names"] == []
     assert "10 reps" in data["dropdown_values"]
     assert "Morning" in data["dropdown_notes"]
     assert data["hidden_values"] == []
@@ -86,6 +86,46 @@ def test_set_default_value_formula_endpoint(client):
     assert data["entries"][0]["numeric_value"] == 20.0
 
     assert client.post("/api/value-formulas/default", json={"formula": 7}).status_code == 422
+
+
+def test_saved_equations_endpoints(client):
+    assert client.get("/api/bootstrap").json()["saved_equations"] == []
+
+    res = client.post("/api/saved-equations", json={"label": "Volume", "formula": {"expr": "a * b"}})
+    assert res.status_code == 200
+    assert res.json()["saved_equations"] == [{"label": "Volume", "spec": {"expr": "a * b"}}]
+
+    res = client.post(
+        "/api/saved-equations",
+        json={"label": "Volume", "formula": {"expr": "a + b"}},
+    )
+    assert res.json()["saved_equations"] == [{"label": "Volume", "spec": {"expr": "a + b"}}]
+
+    assert client.post("/api/saved-equations", json={"label": "Bad", "formula": "nope"}).status_code == 400
+    assert client.post("/api/saved-equations", json={"label": "  ", "formula": "sum_numbers"}).status_code == 400
+
+    res = client.post("/api/saved-equations/remove", json={"label": "volume"})
+    assert res.status_code == 200
+    assert res.json()["saved_equations"] == []
+
+
+def test_factory_reset_clears_profiles_and_entries(client):
+    client.post("/api/entries", json=ENTRY_BODY)
+    client.post("/api/profiles/switch", json={"name": "Travel"})
+    client.post("/api/entries", json={**ENTRY_BODY, "exercise": "Walking"})
+
+    res = client.post("/api/data/reset")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["entries"] == []
+    assert data["history_rows"] == []
+    assert data["dropdown_names"] == []
+    assert data["chart_names"] == []
+    assert data["active_profile"] == "Default"
+    assert data["dropdown_profiles"] == ["Default"]
+    assert data["value_formulas"] == {"default": "first_number", "by_name": {}}
+
+    assert client.get("/api/bootstrap").json()["dropdown_profiles"] == ["Default"]
 
 
 def test_rename_name(client):

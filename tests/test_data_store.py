@@ -122,3 +122,20 @@ def test_default_value_formula_applies_to_every_name(store: TrackStore, data_pat
 
     with pytest.raises(ValueError):
         store.set_default_value_formula("not_a_formula")
+
+
+def test_saved_equations_persist(store: TrackStore, data_path):
+    assert store.saved_equations() == []
+
+    store.save_equation("Volume", {"expr": "a * b * c"})
+    store.save_equation("Average", {"expr": "avg(a, b)"})
+    assert [item["label"] for item in store.saved_equations()] == ["Volume", "Average"]
+
+    reloaded = TrackStore(data_path)
+    assert reloaded.saved_equations()[0] == {"label": "Volume", "spec": {"expr": "a * b * c"}}
+
+    store.remove_saved_equation("Volume")
+    assert [item["label"] for item in store.saved_equations()] == ["Average"]
+    assert TrackStore(data_path).saved_equations() == [
+        {"label": "Average", "spec": {"expr": "avg(a, b)"}}
+    ]

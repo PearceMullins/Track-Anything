@@ -18,6 +18,12 @@ export interface ValueFormulasConfig {
   by_name: Record<string, FormulaSpec>;
 }
 
+/** A named equation a profile can reuse across tracked names. */
+export interface SavedEquation {
+  label: string;
+  spec: FormulaSpec;
+}
+
 export const PRESET_LABELS: Record<FormulaPreset, string> = {
   first_number: "First number",
   last_number: "Last number",
@@ -363,6 +369,42 @@ export function formulaSpecsEqual(a: FormulaSpec, b: FormulaSpec): boolean {
   if (typeof a === "string" && typeof b === "string") return a === b;
   if (typeof a === "object" && typeof b === "object") return a.expr === b.expr;
   return false;
+}
+
+export function normalizeSavedEquations(raw: unknown): SavedEquation[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SavedEquation[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const label = String((item as { label?: unknown }).label ?? "").trim();
+    const spec = (item as { spec?: unknown }).spec;
+    const key = label.toLowerCase();
+    if (!label || seen.has(key) || !isFormulaSpec(spec)) continue;
+    seen.add(key);
+    out.push({ label, spec });
+  }
+  return out;
+}
+
+export function setSavedEquation(
+  equations: SavedEquation[],
+  label: string,
+  spec: FormulaSpec,
+): SavedEquation[] {
+  const clean = label.trim();
+  if (!clean) throw new Error("Label cannot be empty.");
+  const remaining = normalizeSavedEquations(equations).filter(
+    (item) => item.label.toLowerCase() !== clean.toLowerCase(),
+  );
+  return [...remaining, { label: clean, spec }];
+}
+
+export function removeSavedEquation(equations: SavedEquation[], label: string): SavedEquation[] {
+  const target = label.trim().toLowerCase();
+  return normalizeSavedEquations(equations).filter(
+    (item) => item.label.toLowerCase() !== target,
+  );
 }
 
 export function renameFormulaName(

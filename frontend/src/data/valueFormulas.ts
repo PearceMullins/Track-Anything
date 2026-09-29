@@ -249,23 +249,78 @@ export function isValidExpr(expr: string): boolean {
 }
 
 function renderTokens(tokens: Token[], numbers: number[]): string {
+  return serializeTokens(
+    tokens.map((tok) =>
+      tok.kind === "name" && isVariableToken(tok.name)
+        ? { kind: "num", value: numbers[tok.name.charCodeAt(0) - 97] ?? 0 }
+        : tok,
+    ),
+    true,
+  );
+}
+
+/**
+ * Rewrites a typed equation such as `(3 + 5) * 2` into the reusable template
+ * `(a + b) * c`, so every entry can be re-scored from the numbers it contains.
+ * Returns null when the text is not a valid expression, has no numbers, or uses
+ * single-letter inputs (those belong to the builder).
+ */
+export function templateFromExpr(expr: string): string | null {
+  let tokens: Token[];
+  try {
+    tokens = tokenize(expr);
+  } catch {
+    return null;
+  }
+  if (tokens.length === 0) return null;
+
+  const unaryPosition = (index: number) => {
+    if (index < 0) return true;
+    const prev = tokens[index];
+    return prev.kind === "op" || prev.kind === "lparen" || prev.kind === "comma";
+  };
+
+  const out: Token[] = [];
+  let numberCount = 0;
+  for (let i = 0; i < tokens.length; i += 1) {
+    const tok = tokens[i];
+    if (tok.kind === "name") {
+      if (isVariableToken(tok.name)) return null;
+      out.push(tok);
+      continue;
+    }
+    if (tok.kind !== "num") {
+      out.push(tok);
+      continue;
+    }
+    const previous = out[out.length - 1];
+    if (previous?.kind === "op" && previous.op === "-" && unaryPosition(i - 2)) {
+      out.pop();
+    }
+    out.push({ kind: "name", name: variableName(numberCount) });
+    numberCount += 1;
+  }
+  if (numberCount === 0) return null;
+  const template = serializeTokens(out);
+  return isValidExpr(template) ? template : null;
+}
+
+function serializeTokens(tokens: Token[], pretty = false): string {
   let out = "";
   tokens.forEach((tok, i) => {
     const prev = tokens[i - 1];
     let text: string;
     if (tok.kind === "num") text = formatNumber(tok.value);
-    else if (tok.kind === "name") {
-      text = isVariableToken(tok.name)
-        ? formatNumber(numbers[tok.name.charCodeAt(0) - 97] ?? 0)
-        : tok.name;
-    } else if (tok.kind === "op") text = OPERATOR_SYMBOLS[tok.op as ChainOperator] ?? tok.op;
-    else if (tok.kind === "lparen") text = "(";
+    else if (tok.kind === "name") text = tok.name;
+    else if (tok.kind === "op") {
+      text = pretty ? (OPERATOR_SYMBOLS[tok.op as ChainOperator] ?? tok.op) : tok.op;
+    } else if (tok.kind === "lparen") text = "(";
     else if (tok.kind === "rparen") text = ")";
     else text = ",";
     const tight =
       text === ")" ||
       text === "," ||
-      (prev?.kind === "lparen") ||
+      prev?.kind === "lparen" ||
       (tok.kind === "lparen" && prev?.kind === "name");
     out += i === 0 ? text : `${tight ? "" : " "}${text}`;
   });

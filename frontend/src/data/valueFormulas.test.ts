@@ -13,6 +13,7 @@ import {
   resolveNumericValue,
   setDefaultFormula,
   setFormulaForName,
+  templateFromExpr,
   variableNames,
 } from "./valueFormulas";
 
@@ -141,6 +142,26 @@ describe("valueFormulas", () => {
     expect(explainFormula("(a + b) / 2", [10, 2])).toBe("(10 + 2) ÷ 2");
     expect(explainFormula("avg(a, b)", [10, 2])).toBe("avg(10, 2)");
     expect(explainFormula("a ^ 2", [3])).toBe("3 ^ 2");
+  });
+
+  it("turns a typed equation into a numeric template", () => {
+    expect(templateFromExpr("(3 + 5) * 2")).toBe("(a + b) * c");
+    expect(templateFromExpr("avg(3, 4)")).toBe("avg(a, b)");
+    expect(templateFromExpr("3")).toBe("a");
+    expect(templateFromExpr("-4 + 2")).toBe("a + b");
+    expect(templateFromExpr("avg(4, 5) * pi")).toBe("avg(a, b) * pi");
+    expect(templateFromExpr("a + 2")).toBeNull();
+    expect(templateFromExpr("no numbers")).toBeNull();
+    expect(templateFromExpr("3 +")).toBeNull();
+    expect(templateFromExpr("   ")).toBeNull();
+  });
+
+  it("re-scores typed equations with the derived template", () => {
+    const score = (text: string) => resolveNumericValue(text, { expr: templateFromExpr(text)! });
+    expect(score("(3 + 5) * 2")).toBe(16);
+    expect(score("-4 + 2")).toBe(-2);
+    expect(score("avg(3, 4)")).toBe(3.5);
+    expect(score("(4 + 6) * 3")).toBe(30);
   });
 
   it("labels presets and expressions for display", () => {

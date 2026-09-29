@@ -24,9 +24,9 @@ function bootstrap(formulas = emptyValueFormulas()): Bootstrap {
   };
 }
 
-function draft(name: string) {
+function draft(name: string, value = "") {
   saveUiSlice("Default", {
-    entryDraft: { name, date: "2026-06-11", value: "", notes: "" },
+    entryDraft: { name, date: "2026-06-11", value, notes: "" },
   });
 }
 
@@ -56,27 +56,41 @@ function typeInto(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function button(container: HTMLElement, label: string): HTMLButtonElement | undefined {
+  return [...container.querySelectorAll("button")].find((item) => item.textContent === label);
+}
+
 function numberInputs(container: HTMLElement): HTMLInputElement[] {
   return [...container.querySelectorAll<HTMLInputElement>(".formula-number-input")];
 }
 
-describe("EntryForm equation inputs", () => {
+describe("EntryForm equation", () => {
   beforeEach(() => {
     localStorage.clear();
     importUiState({ tab: "log", byProfile: {} });
   });
 
-  it("starts with a single input and no free-text value field", () => {
+  it("offers only the two equation modes", () => {
     draft("Pushups");
     const mounted = mount(bootstrap());
     expect(mounted.container.textContent).toContain("Equation for Pushups");
-    expect(numberInputs(mounted.container)).toHaveLength(1);
-    expect(mounted.container.textContent).not.toContain("Manage values");
-    expect(mounted.container.textContent).not.toContain("Chart");
+    expect(button(mounted.container, "Build an equation")).toBeDefined();
+    expect(button(mounted.container, "Custom expression")).toBeDefined();
+    expect(mounted.container.textContent).not.toContain("First number");
+    expect(mounted.container.textContent).not.toContain("Smallest number");
+    expect(mounted.container.textContent).not.toContain("Advanced");
     unmount(mounted);
   });
 
-  it("restores the name's equation and totals the typed numbers", () => {
+  it("starts in builder mode with a single input", () => {
+    draft("Pushups");
+    const mounted = mount(bootstrap());
+    expect(numberInputs(mounted.container)).toHaveLength(1);
+    expect(mounted.container.textContent).toContain("Fill in every input");
+    unmount(mounted);
+  });
+
+  it("restores the name's built equation and totals the numbers", () => {
     draft("Pushups");
     let formulas = emptyValueFormulas();
     formulas = setFormulaForName(formulas, "Pushups", { expr: "a * b" });
@@ -88,7 +102,6 @@ describe("EntryForm equation inputs", () => {
       typeInto(boxes[0], "3");
       typeInto(boxes[1], "4");
     });
-
     expect(mounted.container.textContent).toContain("Saves as");
     expect(mounted.container.textContent).toContain("3 × 4");
     expect(mounted.container.textContent).toContain("12");
@@ -97,48 +110,77 @@ describe("EntryForm equation inputs", () => {
 
   it("adds inputs and applies one operator to every gap", () => {
     draft("Pushups");
-    let formulas = emptyValueFormulas();
-    formulas = setFormulaForName(formulas, "Pushups", { expr: "a + b" });
-    const mounted = mount(bootstrap(formulas));
-
-    const more = mounted.container.querySelector<HTMLButtonElement>('[aria-label="More inputs"]');
+    const mounted = mount(bootstrap());
     act(() => {
-      more?.click();
+      mounted.container.querySelector<HTMLButtonElement>('[aria-label="More inputs"]')?.click();
     });
-    expect(numberInputs(mounted.container)).toHaveLength(3);
+    expect(numberInputs(mounted.container)).toHaveLength(2);
 
     const boxes = numberInputs(mounted.container);
     act(() => {
-      typeInto(boxes[0], "2");
+      typeInto(boxes[0], "20");
       typeInto(boxes[1], "5");
-      typeInto(boxes[2], "10");
     });
-    expect(mounted.container.textContent).toContain("2 + 5 + 10");
-    expect(mounted.container.textContent).toContain("17");
+    expect(mounted.container.textContent).toContain("20 + 5");
+    expect(mounted.container.textContent).toContain("25");
     unmount(mounted);
   });
 
-  it("flags names that use an advanced equation", () => {
-    draft("Pushups");
-    let formulas = emptyValueFormulas();
-    formulas = setFormulaForName(formulas, "Pushups", "min_number");
-    const mounted = mount(bootstrap(formulas));
-    expect(mounted.container.textContent).toContain("advanced equation");
-    expect(mounted.container.textContent).toContain("Smallest number");
-    expect(mounted.container.textContent).toContain("Use number inputs");
-    unmount(mounted);
-  });
-
-  it("asks for every input before saving", () => {
+  it("switches to a custom expression and derives the template", () => {
     draft("Pushups");
     const mounted = mount(bootstrap());
-    const save = [...mounted.container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Save entry",
-    );
     act(() => {
-      save?.click();
+      button(mounted.container, "Custom expression")?.click();
     });
-    expect(mounted.container.textContent).toContain("Fill in every input");
+
+    const input = mounted.container.querySelector<HTMLInputElement>("#entry-custom-equation");
+    expect(input).not.toBeNull();
+    act(() => {
+      typeInto(input as HTMLInputElement, "(3 + 5) * 2");
+    });
+    expect(mounted.container.textContent).toContain("(a + b) * c");
+    expect(mounted.container.textContent).toContain("(3 + 5) * 2");
+    expect(mounted.container.textContent).toContain("16");
+    unmount(mounted);
+  });
+
+  it("rejects a custom expression without numbers", () => {
+    draft("Pushups");
+    let formulas = emptyValueFormulas();
+    formulas = setFormulaForName(formulas, "Pushups", { expr: "avg(a, b)" });
+    const mounted = mount(bootstrap(formulas));
+
+    const input = mounted.container.querySelector<HTMLInputElement>("#entry-custom-equation");
+    expect(input?.value).toBe("avg(a, b)");
+    act(() => {
+      typeInto(input as HTMLInputElement, "a + b");
+    });
+    expect(mounted.container.textContent).toContain("Add at least one number");
+
+    act(() => {
+      button(mounted.container, "Save entry")?.click();
+    });
+    expect(mounted.container.textContent).toContain("Enter an expression with at least one number");
+    unmount(mounted);
+  });
+
+  it("asks for every input before saving in builder mode", () => {
+    draft("Pushups");
+    const mounted = mount(bootstrap());
+    act(() => {
+      button(mounted.container, "Save entry")?.click();
+    });
+    expect(mounted.container.textContent).toContain("Type a number in every input box");
+    unmount(mounted);
+  });
+
+  it("restores unfinished numbers from the draft", () => {
+    draft("Pushups", "3, 10");
+    let formulas = emptyValueFormulas();
+    formulas = setFormulaForName(formulas, "Pushups", { expr: "a + b" });
+    const mounted = mount(bootstrap(formulas));
+    const boxes = numberInputs(mounted.container);
+    expect(boxes.map((box) => box.value)).toEqual(["3", "10"]);
     unmount(mounted);
   });
 });

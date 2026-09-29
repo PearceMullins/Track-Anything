@@ -71,12 +71,13 @@ saved to `track_anything_data.json` next to the app.
 - **Flexible entries** — custom names, notes, and any number of inputs per log
 - **History** — edit, delete, and review past entries
 - **Charts** — progress over time for any tracked name
-- **Custom equations** — the log form *is* the equation: choose an operator (add,
-  subtract, multiply, divide, power, remainder), choose how many inputs you want, and
-  type the numbers. The saved entry shows the expression (`3 × 10 × 50`) and charts the
-  result. Need something the operator chain cannot express? The **Advanced** panel
-  offers quick picks (first, last, sum, product, largest, smallest number) and custom
-  expressions with parentheses and functions (`avg`, `min`, `max`, `round`, `sqrt`, …)
+- **Custom equations** — the log form *is* the equation. Choose **Build an equation**
+  to pick an operator (add, subtract, multiply, divide, power, remainder) and how many
+  inputs you want, then type the numbers; or choose **Custom expression** and type the
+  whole equation with its numbers, e.g. `(3 + 5) * 2` or `avg(3, 4)`, using parentheses,
+  functions (`avg`, `min`, `max`, `round`, `sqrt`, …) and constants (`pi`, `e`). The
+  entry is saved as the expression you see and charts the result. Each named thing
+  keeps its own equation, so it is pre-filled the next time you log it
 - **Local-first** — data stays on your device; no login required
 - **Android and iOS builds** — Capacitor apps with on-device storage
 - **Optional tips** — Google Play donations only; no locked features

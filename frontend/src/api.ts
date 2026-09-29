@@ -14,6 +14,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const detail = (body as { detail?: string | { msg: string }[] }).detail;
+    if (res.status === 405 || (res.status === 404 && init?.method === "POST")) {
+      throw new Error(
+        "The server is out of date. Close the app window and start run.bat again, then retry.",
+      );
+    }
     const message =
       typeof detail === "string"
         ? detail

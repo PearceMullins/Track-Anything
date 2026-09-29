@@ -102,7 +102,10 @@ def _serialize_entry(index: int, entry: TrackEntry) -> dict:
 
 def _history_rows() -> list[dict]:
     rows: list[dict] = []
-    for index, entry in enumerate(_store().entries):
+    store = _store()
+    formulas = store.value_formulas()
+    for index, entry in enumerate(store.entries):
+        formula = formula_for_name(formulas, entry.exercise)
         rows.append(
             {
                 "entry_index": index,
@@ -110,6 +113,7 @@ def _history_rows() -> list[dict]:
                 "name": entry.exercise,
                 "value": entry.value,
                 "notes": entry.notes,
+                "numeric_value": resolve_numeric_value(entry.value, formula),
             }
         )
     return rows

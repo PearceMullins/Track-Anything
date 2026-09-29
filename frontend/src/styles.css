@@ -1177,6 +1177,17 @@ tbody tr.selected {
   margin-bottom: 8px;
 }
 
+.chart-tooltip-result {
+  margin: -4px 0 8px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.history-result {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .chart-tooltip-sets {
   list-style: none;
   margin: 0;

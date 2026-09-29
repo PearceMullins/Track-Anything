@@ -64,6 +64,17 @@ def test_chart_points(client):
     assert points[0]["value"] == 10.0
 
 
+def test_history_rows_include_equation_result(client):
+    client.post("/api/entries", json={**ENTRY_BODY, "value": "5 x 5 x 5"})
+    client.post("/api/value-formulas", json={"name": "Pushups", "formula": {"expr": "a * b * c"}})
+
+    data = client.get("/api/bootstrap").json()
+    row = data["history_rows"][0]
+    assert row["value"] == "5 x 5 x 5"
+    assert row["numeric_value"] == 125.0
+    assert data["entries"][0]["numeric_value"] == 125.0
+
+
 def test_set_value_formula_endpoint(client):
     client.post("/api/entries", json={**ENTRY_BODY, "value": "2 sets of 10"})
 

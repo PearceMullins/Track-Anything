@@ -16,6 +16,7 @@ export interface HistoryRow {
   name: string;
   value: string;
   notes: string;
+  numeric_value: number;
 }
 
 export interface Bootstrap {

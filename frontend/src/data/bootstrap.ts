@@ -44,6 +44,7 @@ export function buildBootstrap(
       name: entry.exercise,
       value: entry.value,
       notes: entry.notes,
+      numeric_value,
     };
   }
 

@@ -47,7 +47,12 @@ const HistoryTableRow = memo(function HistoryTableRow({
       </td>
       <td className="history-anchor">{isoToDisplay(row.entry_date)}</td>
       <td className="history-anchor">{row.name}</td>
-      {showValues && <td className="history-anchor">{row.value}</td>}
+      {showValues && (
+        <td className="history-anchor">
+          {row.value}
+          {row.value.trim() ? <span className="history-result"> = {row.numeric_value}</span> : null}
+        </td>
+      )}
       {showNotes && <td className="history-anchor">{row.notes || "-"}</td>}
     </tr>
   );

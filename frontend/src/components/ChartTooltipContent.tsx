@@ -1,7 +1,7 @@
-import type { ChartPointDetail } from "../types";
+import type { ChartSeriesPoint } from "../types";
 
 interface ChartTooltipContentProps {
-  point: ChartPointDetail & { label: string };
+  point: ChartSeriesPoint & { label: string };
 }
 
 export function ChartTooltipContent({ point }: ChartTooltipContentProps) {
@@ -12,6 +12,10 @@ export function ChartTooltipContent({ point }: ChartTooltipContentProps) {
       <div className="chart-tooltip-total">
         {projected ? "Projected: " : "Value: "}
         {point.valueDisplay}
+      </div>
+      <div className="chart-tooltip-result">
+        {projected ? "Projected result: " : "Result: "}
+        {point.value}
       </div>
       {point.notes ? <div className="chart-tooltip-notes">{point.notes}</div> : null}
     </div>

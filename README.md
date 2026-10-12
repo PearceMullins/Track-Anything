@@ -6,7 +6,7 @@ Your entries stay in your browser; no account or installation is required.
 
 **[Open the app](https://pearcemullins.github.io/Track-Anything/)** ·
 **[Download the HTML file](https://raw.githubusercontent.com/PearceMullins/Track-Anything/main/Track%20Anything.html)** ·
-**[Support on Patreon](https://patreon.com/TrackAnything?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)**
+**[Support on Patreon](https://www.patreon.com/cw/PearceMullins)**
 
 ## Open locally
 

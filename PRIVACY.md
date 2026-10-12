@@ -1,116 +1,53 @@
-<p align="center">
-  <a href="README.md">README</a>
-  ·
-  <a href="CONTRIBUTING.md">Contributing</a>
-  ·
-  <a href="LICENSE">MIT license</a>
-  ·
-  <a href="PRIVACY.md"><strong>Privacy</strong></a>
-  ·
-  <a href="SECURITY.md">Security</a>
-</p>
+# Privacy Policy
 
-<p align="center">
-  <img src="assets/app.ico" width="96" height="96" alt="Track Anything icon" />
-</p>
+**Track Anything — effective October 11, 2026**
 
-<h1 align="center">Privacy Policy</h1>
+This notice describes the standalone HTML app, whether opened locally or from
+its [hosted page](https://pearcemullins.github.io/Track-Anything/).
 
-<p align="center">
-  <strong>Track Anything</strong>
-</p>
+## Tracker data
 
-<p align="center">
-  A local-first app to log custom metrics, review history, and chart progress over time.
-</p>
+Profiles, entries, notes, equations, saved lists, and interface preferences are
+stored in your browser's local storage. No account is required. The app has
+no advertising or analytics and does not upload tracker data to developer
+servers. Application styling and logic are included in the HTML file.
 
-<p align="center">
-  Effective date: June 29, 2026. This policy applies to the Track Anything
-  Android and iOS apps, package/bundle ID <code>com.trackanything.app</code>.
-</p>
+Export creates a backup file containing your tracker data and preferences.
+Import reads a file you select and replaces current app data after confirmation.
+Sharing uses your browser's sharing controls, when available, or downloads a
+backup. Data leaves your browser only when you choose to export or share it.
+Keep backup files private if they contain sensitive information.
 
-<p align="center">
-  <a href="https://github.com/PearceMullins/Track-Anything">Repository</a>
-  ·
-  <a href="https://github.com/PearceMullins/Track-Anything/releases">Releases</a>
-  ·
-  <a href="https://pearcemullins.github.io/Track-Anything/privacy-policy/">Web version</a>
-</p>
+## Hosting and external links
 
----
+Opening the hosted app requests the HTML from GitHub Pages. GitHub may process
+ordinary connection information such as your IP address under its
+[privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+Your tracker entries are stored locally, separately for each browser and origin.
 
-## Summary
+Donations opens Patreon in a separate tab. Patreon handles accounts, payments,
+and any information you provide there under its own
+[privacy policy](https://privacy.patreon.com/policies).
+The tracker does not collect payment information or send tracker data to Patreon.
 
-Track Anything stores tracker data on your device. It has no developer-hosted account
-system, no ads, no analytics SDK, and no developer server upload for your tracker
-entries. Optional tips use native store billing.
+## Retention and deletion
 
-## What Track Anything Stores
+Data remains until you delete it in the app, use Factory reset, or clear the
+browser's storage. Private browsing can discard it when closed. Moving a
+downloaded HTML file or switching browsers can change the storage available
+to the app. Export backups before making those changes.
 
-Track Anything lets you create profiles, names, labels, values, units, entries,
-history, and charts. This tracker data is saved on your device using app-local
-storage.
+Factory reset deletes the app's local profiles, entries, equations, and lists.
+It does not delete backup files you previously exported or data stored in
+another browser or copy of the app.
 
-Track Anything does not require an account. Tracker data is not sent to developer
-servers.
+## Security and contact
 
-## Data Collection And Sharing
+Local storage is not encrypted by the app. Your browser, device security,
+and backups affect its protection. Keep your browser and device updated.
+The app is not directed to children under 13.
 
-Track Anything does not collect personal information from the app developer side,
-does not sell user data, does not use advertising SDKs, and does not use analytics
-SDKs.
-
-Tracker data remains on your device unless you choose to share it outside the app
-through your own device tools.
-
-## Optional Tips And Store Billing
-
-Track Anything may offer optional one-time tips through Google Play Billing on
-Android and Apple in-app purchases on iOS. Track Anything does not collect or
-store your payment card number, bank information, Google account credentials, or
-Apple account credentials.
-
-Google or Apple may process purchase and payment information under their own
-terms and privacy policies.
-
-## Permissions
-
-The Android and iOS apps may include Internet access for the app runtime and
-store billing. Track Anything does not use this permission to upload tracker
-entries to developer servers.
-
-The Android app may include Google Play Billing permission to support optional
-tips.
-
-## Retention And Deletion
-
-Tracker data stays on your device until you delete entries or profiles in the app,
-clear app storage, or uninstall the app.
-
-Because Track Anything does not create developer-hosted accounts, there is no
-server account for the developer to delete.
-
-## Security
-
-Tracker data is stored locally on your device. Your device security settings,
-operating system, backups, and other apps may affect how that local data is
-protected.
-
-Use your device lock screen and keep your operating system updated to help protect
-your local data.
-
-## Children
-
-Track Anything is not directed to children under 13. If this changes, this
-privacy policy and store disclosures will be updated.
-
-## Changes
-
-This privacy policy may be updated when Track Anything changes how it handles data.
-Updates will be posted on this page with a new effective date.
-
-## Contact
-
-Privacy questions can be sent through the developer contact shown on Google Play
-or the App Store, or opened as an issue at
-[github.com/PearceMullins/Track-Anything/issues](https://github.com/PearceMullins/Track-Anything/issues).
+Policy changes will appear here with an updated effective date.
+For privacy questions, open an issue in the
+[repository](https://github.com/PearceMullins/Track-Anything/issues), without
+posting private tracker data.

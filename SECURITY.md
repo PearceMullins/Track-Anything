@@ -1,23 +1,10 @@
-<p align="center">
-  <a href="README.md">README</a>
-  ·
-  <a href="CONTRIBUTING.md">Contributing</a>
-  ·
-  <a href="LICENSE">MIT license</a>
-  ·
-  <a href="PRIVACY.md">Privacy</a>
-  ·
-  <a href="SECURITY.md"><strong>Security</strong></a>
-</p>
-
 # Security Policy
 
-Please report security concerns through the developer contact listed on Google
-Play, or by opening a [GitHub security advisory](https://github.com/PearceMullins/Track-Anything/security/advisories/new)
-when the repository is public.
+Report vulnerabilities through a
+[private GitHub security advisory](https://github.com/PearceMullins/Track-Anything/security/advisories/new).
+Do not post sensitive vulnerability details or personal tracker data in public
+issues.
 
-Do not post sensitive vulnerability details in public issues.
-
-## Supported Versions
-
-Security fixes target the latest release only.
+Security fixes target the current HTML app on `main`. Use the latest copy.
+Tracker data lives in browser local storage and is not encrypted by the app.
+Protect your device and exported backup files.

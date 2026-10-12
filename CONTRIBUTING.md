@@ -1,56 +1,23 @@
-<p align="center">
-  <a href="README.md">README</a>
-  ·
-  <a href="CONTRIBUTING.md"><strong>Contributing</strong></a>
-  ·
-  <a href="LICENSE">MIT license</a>
-  ·
-  <a href="PRIVACY.md">Privacy</a>
-  ·
-  <a href="SECURITY.md">Security</a>
-</p>
-
 # Contributing
 
-Thanks for your interest in Track Anything.
+Open an issue before larger changes. Keep changes focused and update related
+documentation when behavior changes.
 
-## Before you start
+The application lives entirely in `Track Anything.html`, including inline CSS
+and JavaScript. Edit this file directly, then copy it to `docs/index.html` so
+the downloaded and hosted applications remain identical. No build step is
+required. Preserve included third-party license notices.
 
-1. Open an issue for larger changes so we can align on approach.
-2. Run the full test suite before opening a pull request:
+Test in a modern browser using a disposable profile or test data:
 
-```powershell
-.\scripts\run_all_tests.ps1
-```
+1. Create profiles and entries, including custom equations and notes.
+2. Save, apply, rename, and remove equations; navigate the calendar.
+3. Edit and delete history; view charts and toggle forecasting.
+4. Export a backup, change data, import it, and verify restoration.
+5. Reload and verify data persists; check reset confirmation controls.
+6. Verify the Patreon link, downloaded file, and hosted app.
+7. Check the browser console and ensure the app loads without external assets
+   or network requests.
 
-## Development setup
-
-```powershell
-pip install -r requirements.txt
-cd frontend
-npm install
-```
-
-Run the API and frontend in two terminals:
-
-```powershell
-# Terminal 1
-python main.py --dev-frontend
-
-# Terminal 2
-cd frontend
-npm run dev
-```
-
-Open `http://localhost:5173`.
-
-## Pull requests
-
-- Keep changes focused and easy to review.
-- Match existing code style and naming.
-- Update docs when behavior or setup steps change.
-- Do not commit local data files (`track_anything_data.json`, `workout_data.json`).
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for reporting vulnerabilities privately.
+Do not commit personal tracker data or exported backups. Include validation
+results in your pull request.

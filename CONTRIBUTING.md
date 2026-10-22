@@ -18,6 +18,11 @@ Test in a modern browser using a disposable profile or test data:
 6. Verify the Patreon link, downloaded file, and hosted app.
 7. Check the browser console and ensure the app loads without external assets
    or network requests.
+8. Check phone portrait/landscape, iPad narrow windows, pinch zoom, 16px touch
+   inputs, and dialog scrolling while the keyboard is visible. Verify unsupported
+   file sharing exports JSON, rejected sharing offers Export, and cancel does
+   not trigger another action. Test Safari's Files picker and share sheet on
+   a real Apple device when available; report emulation separately.
 
 Do not commit personal tracker data or exported backups. Include validation
 results in your pull request.

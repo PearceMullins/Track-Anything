@@ -8,7 +8,40 @@ Your entries stay in your browser; no account or installation is required.
 **[Download the HTML file](https://raw.githubusercontent.com/PearceMullins/Track-Anything/main/Track%20Anything.html)** ·
 **[Support on Patreon](https://www.patreon.com/cw/PearceMullins)**
 
-## Open locally
+## iPhone, iPad, and Mac
+
+Use an up-to-date Safari and **[open Track Anything](https://pearcemullins.github.io/Track-Anything/)**.
+On iPhone and iPad, open this link in Safari rather than an HTML preview in
+Files, Mail, or another app.
+
+- **Home Screen:** in Safari, tap Share, then **Add to Home Screen**. If your
+  device offers **Open as Web App**, enable it. Open the new icon to use the app.
+- **Mac:** use the hosted app in Safari or open the downloaded HTML file in
+  Safari. Supported versions also offer **File → Add to Dock**.
+- **Backups:** open **Data → Share**, then choose **Save to Files** when offered.
+  If file sharing is unavailable, use **Export** and save the downloaded JSON
+  file. To restore it, use **Data → Import** and choose the JSON file in Files.
+  A canceled share leaves your data unchanged.
+
+The layout adapts to phone portrait/landscape, tablets, and narrow iPad windows.
+Pinch zoom remains available; dialogs resize with the visible keyboard area.
+Entries save locally, without an account or automatic iCloud sync. To move
+between devices, browsers, or a separate Home Screen app, export and import
+a backup. Keep regular backups: Safari can remove website data under storage
+pressure or after inactivity, and private browsing may discard it when closed.
+
+Opening or reloading the hosted app requires internet access. Adding its icon
+does not install an offline cache. A downloaded HTML file works offline in a
+desktop browser; iPhone/iPad file previews are not the supported launch method.
+
+Apple instructions: [iPhone Home Screen](https://support.apple.com/guide/iphone/bookmark-a-website-iph42ab2f3a7/ios),
+[iPad Home Screen](https://support.apple.com/guide/ipad/bookmark-a-website-ipadc602b75b/ipados),
+[Mac web apps](https://support.apple.com/104996).
+Implementation references: [WebKit user activation](https://webkit.org/blog/13862/the-user-activation-api/),
+[safe areas](https://webkit.org/blog/7929/designing-websites-for-iphone-x/), and
+[storage policy](https://webkit.org/blog/14403/updates-to-storage-policy/).
+
+## Open locally on a desktop
 
 Download `Track Anything.html`, then double-click it or open it in a modern
 browser. It works offline. If the download link displays the app's source,
@@ -53,6 +86,11 @@ download. Factory reset requires typing `factory reset`.
 To update the app, edit its inline HTML, CSS, or JavaScript, test it in a
 browser, and copy the finished file to `docs/index.html`. Keep both app files
 identical. GitHub Pages publishes the `docs` directory from `main`.
+
+Compatibility checks use automated WebKit on Windows at phone, tablet, and
+desktop sizes. This is not physical iPhone/iPad or macOS Safari testing;
+native share sheets, Files pickers, and Home Screen installation still need
+real-device verification.
 
 Before submitting changes, check entry creation and editing, profiles,
 equations, calendar selection, history deletion, charts, backups, reset, and

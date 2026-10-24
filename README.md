@@ -5,7 +5,7 @@ charting progress. All styling and application logic are included in the HTML.
 Your entries stay in your browser; no account or installation is required.
 
 **[Open the app](https://pearcemullins.github.io/Track-Anything/)** ·
-**[Download the HTML file](https://raw.githubusercontent.com/PearceMullins/Track-Anything/main/Track%20Anything.html)** ·
+**[Download the HTML file](https://github.com/PearceMullins/Track-Anything/releases/latest/download/Track-Anything.html)** ·
 **[Support on Patreon](https://www.patreon.com/cw/PearceMullins)**
 
 ## iPhone, iPad, and Mac
@@ -43,9 +43,9 @@ Implementation references: [WebKit user activation](https://webkit.org/blog/1386
 
 ## Open locally on a desktop
 
-Download `Track Anything.html`, then double-click it or open it in a modern
-browser. It works offline. If the download link displays the app's source,
-save the page as `Track Anything.html` and open the saved file.
+Download `Track-Anything.html`, then double-click it or open it in a modern
+browser. It works offline. This is the same app as the repository's
+`Track Anything.html`; the release provides a direct HTML download.
 
 The HTML includes its CSS and JavaScript, so no separate assets, build tools,
 or server are needed. JavaScript and browser local storage must be enabled.
